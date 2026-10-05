@@ -24,7 +24,21 @@ Every card costs fuel. You gain 3 fuel a turn (10 max), so pressing Continue wit
 | Missile | 3 | One-shot, hunts the nearest enemy and explodes |
 | Mortar | 2 | Lobbed shell with a big splash |
 
-Desktop keys: `1`–`3` pick a card, `↑`/`↓` aim, `Space` continues.
+Desktop keys: `1`–`3` pick a card, `↑`/`↓` aim, `Space` continues, `←`/`→` change difficulty on the menu.
+
+## Difficulty
+
+Pick the opponent before every match (title screen and result screen). It starts on Noob, and beating a level lines up the next one for the rematch; you can always choose any level.
+
+| Level | Feel | What changes |
+| --- | --- | --- |
+| Noob | Very easy | Plays random cards, never aims, often dithers, earns 2 fuel a turn |
+| Rookie | Winnable | Mostly random cards, rarely aims, sometimes dithers |
+| Veteran | Some difficulty | Usually picks and aims well, occasional mistakes |
+| Ace | Hard | Always picks and aims its best, opens with more fuel |
+| Legend | Very hard | Sharper again, opens with 8 fuel and a 120-health airport |
+
+The computer always draws from the same cards and launches at most one per turn, like you. Levels change how well it plays and, at either end of the ladder, its fuel or airport health. Level settings live in `TR.LEVELS` in `js/config.js`.
 
 ## Structure
 

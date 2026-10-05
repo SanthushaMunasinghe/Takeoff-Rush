@@ -57,8 +57,17 @@
     return best;
   }
 
-  TR.aiPlan = function (G, team) {
+  // Skill profile for a perfectly attentive computer. Difficulty levels (TR.LEVELS)
+  // override these: `pass` = chance of dithering a turn away, `random` = chance of
+  // playing any old card, `aim` = chance of bothering to aim, `noise` = fuzz on
+  // how it rates its cards, `save` = willingness to bank fuel for a big unit.
+  const SHARP = { pass: 0, random: 0, aim: 1, noise: 2.2, save: 0.45 };
+
+  TR.aiPlan = function (G, team, skill) {
+    const s = Object.assign({}, SHARP, skill);
     const me = G.teams[team];
+    const income = me.income || TR.FUEL.perTurn;
+    if (Math.random() < s.pass) return null;
     const foes = G.units.filter((u) => u.team !== team && !u.dead && u.def.kind !== 'missile');
     const tracks = forecast(foes);
     const urgent = foes.filter((u) => progress(u) > W * 0.5).length;
@@ -82,13 +91,18 @@
         if (type === 'heli') value += urgent * 0.5;
         if (type === 'mheli') value += Math.min(2, foes.length * 0.5);
       }
-      options.push({ type, angle: pick.ang, value: value + rand(0, 2.2), air: def.baseDmg > 0 });
+      const angle = Math.random() < s.aim ? pick.ang : lerp(def.aMin, def.aMax, Math.random());
+      options.push({ type, angle, value: value + rand(0, s.noise), air: def.baseDmg > 0 });
     }
     if (!options.length) return null;
+    if (Math.random() < s.random) {
+      const any = TR.pick(options);
+      return { type: any.type, angle: any.angle };
+    }
 
     // Bank fuel for a heavy hitter in hand when nothing is bearing down on us.
-    const dream = me.hand.find((t) => TR.UNITS[t].cost > me.fuel && TR.UNITS[t].cost <= me.fuel + TR.FUEL.perTurn && TR.UNITS[t].cost >= 6);
-    if (dream && urgent === 0 && Math.random() < 0.45) return null;
+    const dream = me.hand.find((t) => TR.UNITS[t].cost > me.fuel && TR.UNITS[t].cost <= me.fuel + income && TR.UNITS[t].cost >= 6);
+    if (dream && urgent === 0 && Math.random() < s.save) return null;
 
     options.sort((a, b) => b.value - a.value);
     let choice = options[0];

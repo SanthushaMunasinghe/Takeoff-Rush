@@ -603,6 +603,16 @@
     }
   };
 
+  // Five-point star path (caller fills/strokes).
+  art.star = function (c, x, y, r) {
+    c.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.46 : r;
+      if (i) c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); else c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    c.closePath();
+  };
+
   art.healthBar = function (c, x, y, w, h, frac, lag, team, hp, shake) {
     const p = PAL[team];
     c.save();

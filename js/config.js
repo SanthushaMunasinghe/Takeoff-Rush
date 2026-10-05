@@ -63,6 +63,22 @@ const TR = window.TR = {};
     },
   };
 
+  // Opponent difficulty ladder, easiest first. The computer always obeys the
+  // card rules; a level sets how well it plays (the skill fields are explained
+  // next to SHARP in ai.js) plus its fuel income, opening fuel and airport health.
+  TR.LEVELS = [
+    { name: 'Noob', blurb: 'Very easy. Barely knows which way is up.', color: '#63cf5c',
+      income: 2, start: 3, hp: 100, pass: 0.35, random: 1, aim: 0, noise: 4, save: 0 },
+    { name: 'Rookie', blurb: 'Winnable. Plays whatever is in hand.', color: '#f2b61d',
+      income: 3, start: 4, hp: 100, pass: 0.25, random: 0.8, aim: 0.25, noise: 4, save: 0 },
+    { name: 'Veteran', blurb: 'A fair fight. Starts to counter you.', color: '#ff8a1e',
+      income: 3, start: 5, hp: 100, pass: 0.05, random: 0.3, aim: 0.8, noise: 3, save: 0.3 },
+    { name: 'Ace', blurb: 'Hard. Aims everything, wastes nothing.', color: '#f2493a',
+      income: 3, start: 6, hp: 100, pass: 0, random: 0, aim: 1, noise: 1, save: 0.45 },
+    { name: 'Legend', blurb: 'Brutal. Sharper still, with a tougher airport.', color: '#9b5cf0',
+      income: 3, start: 8, hp: 120, pass: 0, random: 0, aim: 1, noise: 0.8, save: 0.45 },
+  ];
+
   // Draw weights: each turn's hand is three different cards picked with these odds.
   TR.DECK = { mustang: 5, heli: 4, bomber: 2, mheli: 2, missile: 2, mortar: 2 };
 

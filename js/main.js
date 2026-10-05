@@ -17,15 +17,28 @@
   const view = { scale: 1, dpr: 1, ox: 0, oy: 0, left: 0, right: W, top: 0, bottom: H, hudTop: 0 };
 
   const G = TR.G = { phase: 'menu', time: 0, turn: 0, units: [], shots: [], paths: [], teams: null };
-  const ui = { picked: -1, aim: null, aiming: false, cardsT: 0, deny: -1, denyT: 0, press: 0, hintPick: true, hintAim: true };
+  const ui = { picked: -1, aim: null, aiming: false, cardsT: 0, deny: -1, denyT: 0, press: 0, hintPick: true, hintAim: true, level: 0 };
+  const LEVELS = TR.LEVELS;
   let acc = 0;
 
   // ---------------------------------------------------------------- layout
 
   const CARD = { w: 116, h: 152, gap: 16, y: 556 };
   const BTN_GO = { x: 1262, y: 624, w: 250, h: 80 };
-  const BTN_PLAY = { x: W / 2 - 170, y: 372, w: 340, h: 104 };
-  const BTN_AGAIN = { x: W / 2 - 170, y: 448, w: 340, h: 92 };
+  const BTN_PLAY = { x: W / 2 - 160, y: 462, w: 320, h: 90 };
+  const BTN_AGAIN = { x: W / 2 - 170, y: 502, w: 340, h: 88 };
+  const MENU_CHIPS = chipRects(338, 168, 76, 14);
+  const OVER_CHIPS = chipRects(408, 140, 70, 10);
+
+  // One selectable chip per difficulty level, centred in a row.
+  function chipRects(y, w, h, gap) {
+    const n = LEVELS.length, total = n * w + (n - 1) * gap;
+    return LEVELS.map((_, i) => ({ x: W / 2 - total / 2 + i * (w + gap), y, w, h }));
+  }
+  function chipAt(rects, p) {
+    for (let i = 0; i < rects.length; i++) if (hit(rects[i], p, 5)) return i;
+    return -1;
+  }
 
   function cardRect(i) {
     const total = 3 * CARD.w + 2 * CARD.gap;
@@ -62,13 +75,16 @@
 
   // ------------------------------------------------------------- game flow
 
-  function mkTeam() {
-    return { hp: BASE_HP, lag: BASE_HP, fuel: FUEL.start, hand: [], pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
+  function mkTeam(hp, fuel, income) {
+    return { hp, maxHp: hp, lag: hp, fuel, income, hand: [], pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
   }
 
   function newGame() {
     G.units = []; G.shots = []; G.nextId = 1; G.turn = 0; G.winner = 0;
-    G.teams = { '1': mkTeam(), '-1': mkTeam() };
+    // The opponent's level sets its fuel economy and airport health; yours never change.
+    G.levelIndex = ui.level;
+    G.level = LEVELS[ui.level];
+    G.teams = { '1': mkTeam(BASE_HP, FUEL.start, FUEL.perTurn), '-1': mkTeam(G.level.hp, G.level.start, G.level.income) };
     fx.clear();
     startPlan(true);
   }
@@ -81,12 +97,12 @@
     G.phase = 'plan'; G.turn++; G.planT = 0;
     for (const k of [1, -1]) {
       const t = G.teams[k];
-      if (!first) t.fuel = Math.min(FUEL.max, t.fuel + FUEL.perTurn);
+      if (!first) t.fuel = Math.min(FUEL.max, t.fuel + t.income);
       t.hand = TR.drawHand();
       t.pending = null;
     }
-    if (!first) { fx.float(486, 606, '+' + FUEL.perTurn, '#ffe55c', 34); audio.play('fuel'); }
-    G.aiChoice = TR.aiPlan(G, -1);
+    if (!first) { fx.float(486, 606, '+' + G.teams[1].income, '#ffe55c', 34); audio.play('fuel'); }
+    G.aiChoice = TR.aiPlan(G, -1, G.level);
     G.aiRevealAt = rand(0.45, 1.2);
     G.aiShown = false;
     ui.picked = -1; ui.aim = null; ui.aiming = false;
@@ -186,12 +202,12 @@
       t.lag = t.lag > t.hp && t.hurtT <= 0 ? Math.max(t.hp, t.lag - 40 * dt) : Math.max(t.lag, t.hp);
       if (t.pending) t.pending.pop = Math.min(1, t.pending.pop + dt * 5);
       // a battered airport smokes
-      if (t.hp < BASE_HP * 0.6 && G.phase !== 'menu') {
+      if (t.hp < t.maxHp * 0.6 && G.phase !== 'menu') {
         t.smokeT -= dt;
         if (t.smokeT <= 0) {
-          t.smokeT = t.hp < BASE_HP * 0.3 ? 0.09 : 0.2;
+          t.smokeT = t.hp < t.maxHp * 0.3 ? 0.09 : 0.2;
           const x = k === 1 ? rand(50, 170) : W - rand(50, 170);
-          fx.puff(x, rand(500, 540), { r: rand(9, 16), life: 1.4, vx: rand(-8, 8), vy: -42, col: Math.random() < 0.25 && t.hp < BASE_HP * 0.3 ? '#ff9a3c' : '#5b534e', back: true });
+          fx.puff(x, rand(500, 540), { r: rand(9, 16), life: 1.4, vx: rand(-8, 8), vy: -42, col: Math.random() < 0.25 && t.hp < t.maxHp * 0.3 ? '#ff9a3c' : '#5b534e', back: true });
         }
       }
     }
@@ -228,6 +244,8 @@
         }
         if (G.endT > 2.3) {
           G.phase = 'over'; G.overT = 0;
+          // Beat a level and the next one up is lined up for the rematch.
+          if (G.winner === 1) ui.level = Math.min(LEVELS.length - 1, G.levelIndex + 1);
           audio.play(G.winner === 1 ? 'win' : 'lose');
         }
       }
@@ -321,8 +339,9 @@
   function drawHud() {
     const me = G.teams[1], foe = G.teams[-1], top = view.hudTop, t = G.time;
 
-    art.healthBar(ctx, 48, top + 24, 400, 34, me.hp / BASE_HP, me.lag / BASE_HP, 1, me.hp, me.hurtT > 0 ? 5 : 0);
-    art.healthBar(ctx, W - 448, top + 24, 400, 34, foe.hp / BASE_HP, foe.lag / BASE_HP, -1, foe.hp, foe.hurtT > 0 ? 5 : 0);
+    art.healthBar(ctx, 48, top + 24, 400, 34, me.hp / me.maxHp, me.lag / me.maxHp, 1, me.hp, me.hurtT > 0 ? 5 : 0);
+    art.healthBar(ctx, W - 448, top + 24, 400, 34, foe.hp / foe.maxHp, foe.lag / foe.maxHp, -1, foe.hp, foe.hurtT > 0 ? 5 : 0);
+    art.text(ctx, G.level.name.toUpperCase(), W - 440, top + 92, 24, G.level.color, { align: 'left' });
     // the opponent's fuel is public knowledge; their hand is not
     art.drop(ctx, W - 62, top + 90, 13);
     art.text(ctx, foe.fuel + '/' + FUEL.max, W - 82, top + 92, 24, '#fff', { align: 'right' });
@@ -405,22 +424,55 @@
     fly('mustang', -1, 120, 150, 1500, -0.04);
 
     ctx.save();
-    ctx.translate(W / 2, 208); ctx.rotate(-0.03);
+    ctx.translate(W / 2, 172); ctx.rotate(-0.03);
     const s = 1 + Math.sin(t * 2.4) * 0.018; ctx.scale(s, s);
-    ctx.font = '400 150px ' + art.FONT;
+    ctx.font = '400 140px ' + art.FONT;
     const w1 = ctx.measureText('TAKEOFF ').width, w2 = ctx.measureText('RUSH').width;
-    logoWord('TAKEOFF', -(w1 + w2) / 2, 0, 150, '#ffd83a');
-    logoWord('RUSH', -(w1 + w2) / 2 + w1, 0, 150, '#ff6a4d');
+    logoWord('TAKEOFF', -(w1 + w2) / 2, 0, 140, '#ffd83a');
+    logoWord('RUSH', -(w1 + w2) / 2 + w1, 0, 140, '#ff6a4d');
     ctx.restore();
-    art.text(ctx, 'TURN-BASED SKY WAR', W / 2, 318, 34, '#fff');
+    art.text(ctx, 'TURN-BASED SKY WAR', W / 2, 266, 30, '#fff');
+
+    art.text(ctx, 'CHOOSE YOUR OPPONENT', W / 2, 314, 22, '#fff6a8', { lw: 5 });
+    drawChips(MENU_CHIPS);
+    art.text(ctx, LEVELS[ui.level].blurb.toUpperCase(), W / 2, 440, 21, '#fff', { lw: 5 });
 
     const pulse = 1 + Math.sin(t * 4) * 0.03;
     ctx.save(); ctx.translate(W / 2, BTN_PLAY.y + BTN_PLAY.h / 2); ctx.scale(pulse, pulse); ctx.translate(-W / 2, -(BTN_PLAY.y + BTN_PLAY.h / 2));
-    art.button(ctx, BTN_PLAY, 'PLAY', { size: 60 });
+    art.button(ctx, BTN_PLAY, 'PLAY', { size: 54 });
     ctx.restore();
 
     art.text(ctx, '1  PICK A CARD      2  DRAG TO AIM      3  PRESS CONTINUE', W / 2, 652, 28, '#fff');
     art.text(ctx, 'LAND YOUR AIRCRAFT AT THE RED AIRPORT TO WIN', W / 2, 692, 20, '#fff6a8', { lw: 5 });
+  }
+
+  // The difficulty picker: the chosen level is lit in its own colour, and each
+  // chip carries one star per rung of the ladder.
+  function drawChips(rects) {
+    rects.forEach((r, i) => {
+      const L = LEVELS[i], on = i === ui.level;
+      ctx.save();
+      ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
+      const s = on ? 1.08 + Math.sin(G.time * 5) * 0.012 : 1;
+      ctx.scale(s, s);
+      art.rrect(ctx, -r.w / 2 + 2, -r.h / 2 + 6, r.w, r.h, 16); ctx.fillStyle = 'rgba(43,26,18,0.3)'; ctx.fill();
+      art.rrect(ctx, -r.w / 2, -r.h / 2, r.w, r.h, 16);
+      ctx.fillStyle = on ? L.color : '#fff6dc'; ctx.fill();
+      ctx.lineWidth = on ? 5 : 3.5; ctx.strokeStyle = art.INK; ctx.stroke();
+      if (on) {
+        ctx.save(); ctx.clip();
+        ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h * 0.42);
+        ctx.restore();
+      }
+      art.text(ctx, L.name.toUpperCase(), 0, -r.h * 0.14, r.w * 0.165, on ? '#fff' : '#5a463a', { stroke: on ? art.INK : false, lw: 5 });
+      const gap = r.w * 0.11;
+      for (let k = 0; k < LEVELS.length; k++) {
+        art.star(ctx, (k - (LEVELS.length - 1) / 2) * gap, r.h * 0.24, r.w * 0.046);
+        ctx.fillStyle = k <= i ? (on ? '#fff' : L.color) : 'rgba(43,26,18,0.18)'; ctx.fill();
+        if (k <= i) { ctx.lineWidth = 1.6; ctx.strokeStyle = art.INK; ctx.stroke(); }
+      }
+      ctx.restore();
+    });
   }
 
   function drawOver() {
@@ -429,21 +481,25 @@
     ctx.fillRect(view.left, view.top, view.right - view.left, view.bottom - view.top);
     const s = art.easeOutBack(k);
     ctx.save(); ctx.translate(W / 2, 360); ctx.scale(s, s); ctx.translate(-W / 2, -360);
-    art.rrect(ctx, W / 2 - 330, 150, 660, 430, 34);
+    art.rrect(ctx, W / 2 - 400, 96, 800, 520, 34);
     ctx.fillStyle = 'rgba(43,26,18,0.35)'; ctx.save(); ctx.translate(4, 12); ctx.fill(); ctx.restore();
     ctx.fillStyle = '#fff6dc'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = art.INK; ctx.stroke();
-    const win = G.winner === 1;
-    ctx.save(); ctx.translate(W / 2, 236); ctx.rotate(-0.04);
-    art.text(ctx, win ? 'VICTORY!' : G.winner === 0 ? 'DRAW!' : 'DEFEAT!', 5, 8, 92, art.INK, { lw: 18 });
-    art.text(ctx, win ? 'VICTORY!' : G.winner === 0 ? 'DRAW!' : 'DEFEAT!', 0, 0, 92, win ? '#ffd83a' : '#ff6a4d', { lw: 16 });
+    const win = G.winner === 1, title = win ? 'VICTORY!' : G.winner === 0 ? 'DRAW!' : 'DEFEAT!';
+    ctx.save(); ctx.translate(W / 2, 172); ctx.rotate(-0.04);
+    art.text(ctx, title, 5, 8, 88, art.INK, { lw: 18 });
+    art.text(ctx, title, 0, 0, 88, win ? '#ffd83a' : '#ff6a4d', { lw: 16 });
     ctx.restore();
+    const foe = G.level.name.toUpperCase();
+    art.text(ctx, win ? 'YOU BEAT ' + foe : G.winner === 0 ? 'ALL SQUARE WITH ' + foe : foe + ' WINS THIS ONE', W / 2, 240, 26, G.level.color, { lw: 6 });
     const me = G.teams[1];
     const stats = [['TURNS', G.turn], ['SHOT DOWN', me.kills], ['LANDED', me.landed]];
     stats.forEach((st, i) => {
       const x = W / 2 + (i - 1) * 190;
-      art.text(ctx, String(st[1]), x, 346, 56, '#4f9dff', { lw: 9 });
-      art.text(ctx, st[0], x, 396, 20, '#6b5a4f', { stroke: false });
+      art.text(ctx, String(st[1]), x, 304, 50, '#4f9dff', { lw: 9 });
+      art.text(ctx, st[0], x, 346, 18, '#6b5a4f', { stroke: false });
     });
+    art.text(ctx, win && ui.level > G.levelIndex ? 'NEXT OPPONENT' : 'OPPONENT', W / 2, 388, 19, '#6b5a4f', { stroke: false });
+    drawChips(OVER_CHIPS);
     art.button(ctx, BTN_AGAIN, 'PLAY AGAIN', { size: 40 });
     ctx.restore();
   }
@@ -501,9 +557,15 @@
     audio.unlock();
     const p = toWorld(e);
     if (G.phase !== 'menu' && hit(muteRect(), p, 8)) { audio.toggle(); return; }
-    if (G.phase === 'menu') { wantFullscreen(); audio.play('go'); newGame(); return; }
-    if (G.phase === 'over') {
-      if (G.overT > 0.4 && hit(BTN_AGAIN, p, 14)) { audio.play('go'); newGame(); }
+    if (G.phase === 'menu' || G.phase === 'over') {
+      const menu = G.phase === 'menu';
+      if (!menu && G.overT < 0.4) return;
+      const chip = chipAt(menu ? MENU_CHIPS : OVER_CHIPS, p);
+      if (chip >= 0) { ui.level = chip; audio.play('pick'); return; }
+      if (hit(menu ? BTN_PLAY : BTN_AGAIN, p, 14)) {
+        if (menu) wantFullscreen();
+        audio.play('go'); newGame();
+      }
       return;
     }
     if (G.phase !== 'plan') return;
@@ -524,7 +586,8 @@
     if (ui.aiming) { e.preventDefault(); aimAt(toWorld(e)); return; }
     if (e.pointerType !== 'mouse') return;
     const p = toWorld(e);
-    let hot = G.phase === 'menu' || (G.phase === 'over' && hit(BTN_AGAIN, p, 14));
+    let hot = (G.phase === 'menu' && (hit(BTN_PLAY, p, 14) || chipAt(MENU_CHIPS, p) >= 0))
+      || (G.phase === 'over' && (hit(BTN_AGAIN, p, 14) || chipAt(OVER_CHIPS, p) >= 0));
     if (G.phase === 'plan') {
       hot = hit(BTN_GO, p, 10) || [0, 1, 2].some((i) => hit(cardRect(i), p, 6));
       const pend = G.teams[1].pending;
@@ -543,6 +606,9 @@
     audio.unlock();
     if (G.phase === 'menu' || (G.phase === 'over' && G.overT > 0.4)) {
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); newGame(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        ui.level = clamp(ui.level + (e.key === 'ArrowRight' ? 1 : -1), 0, LEVELS.length - 1);
+      }
       return;
     }
     if (G.phase !== 'plan') return;
