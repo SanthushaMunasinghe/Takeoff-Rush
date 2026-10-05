@@ -1,0 +1,59 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #58bdf2;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body { position: fixed; inset: 0; }
+
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* Portrait phones get a nudge to rotate; desktop windows are left alone. */
+#rotate {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #58bdf2;
+  color: #fff;
+  font: 700 20px/1.3 "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  text-align: center;
+  text-shadow: 0 2px 0 #2b1a12;
+  z-index: 10;
+}
+
+.rotate-icon {
+  width: 54px;
+  height: 92px;
+  border: 5px solid #2b1a12;
+  border-radius: 12px;
+  background: #fff;
+  animation: rotate-hint 1.8s ease-in-out infinite;
+}
+
+@keyframes rotate-hint {
+  0%, 20% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate { display: flex; }
+}
