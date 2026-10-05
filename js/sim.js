@@ -71,7 +71,7 @@
     const pts = [{ x: b.x, y: b.y }];
     const dt = 1 / 30;
     let len = 0, t = 0;
-    while ((o.len ? len < o.len : t < o.time) && t < (o.cap || 14)) {
+    while ((o.len ? len < o.len : t < o.time) && t < 14) {
       const px = b.x, py = b.y;
       TR.stepBody(b, dt, null);
       len += Math.hypot(b.x - px, b.y - py); t += dt;
@@ -203,8 +203,8 @@
       else { mx = u.x + u.team * Math.cos(u.a) * d.nose; my = u.y - Math.sin(u.a) * d.nose; }
       const tt = Math.hypot(e.x - mx, e.y - my) / w.speed;
       const tx = e.x + e.vx * tt - mx, ty = e.y + e.vy * tt - my;
-      // Guns only fire more or less level; a pair that has just stopped lines up first.
-      if (Math.abs(ty) > Math.abs(tx) * Math.tan(w.cone * 2)) return;
+      // Guns only fire a little beyond the cone; a pair that has just stopped lines up first.
+      if (Math.abs(ty) > Math.abs(tx) * Math.tan(w.cone + 0.14)) return;
       const ang = Math.atan2(ty, tx) + rand(-w.spread, w.spread);
       G.shots.push({ k: 'bullet', team: u.team, x: mx, y: my, vx: Math.cos(ang) * w.speed, vy: Math.sin(ang) * w.speed, life: w.range / w.speed * 1.25, dmg: w.dmg });
       fx.spark(mx, my, 8);
