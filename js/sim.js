@@ -122,7 +122,10 @@
     for (const e of G.units) {
       if (e.team === team || e.dead) continue;
       const d = Math.hypot(e.x - x, e.y - y) - e.def.radius * 0.5;
-      if (d < wh.aoe) hurt(G, e, wh.dmg * (1 - 0.55 * clamp(d / wh.aoe, 0, 1)));
+      if (d >= wh.aoe) continue;
+      // Full damage in the core of the blast, fading to 40% at its edge.
+      const fade = clamp((d - wh.aoe * 0.4) / (wh.aoe * 0.6), 0, 1);
+      hurt(G, e, wh.dmg * (1 - 0.6 * fade));
     }
     fx.boom(x, y, wh.aoe * 0.72, true);
     if (y > GROUND - 30) fx.dust(x, wh.aoe * 0.5);
