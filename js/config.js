@@ -20,9 +20,9 @@ const TR = window.TR = {};
   // altitude band (altLow..altHigh, screen y) it levels off.
   // Every aircraft shares the whole sky, so the launch angle is what picks its lane.
   // Aircraft fly for the enemy airport until a hostile aircraft is facing them:
-  // ahead, inside weapon.range and within weapon.cone of dead level (see TR.facing).
-  // Then they stop, level up with each other and trade fire until one is gone.
-  // Aircraft in other lanes fly straight past.
+  // inside weapon.range and within weapon.cone of the way they are heading (see
+  // TR.facing). Then they stop right where they are, pitch and all, and fire until
+  // it is gone. Aircraft in other lanes fly straight past.
   const LOW = 505, HIGH = 135;
   TR.HULL = 0.5;      // share of both aircraft's radii added to the cone, so a lane is about a hull tall
   TR.UNITS = {

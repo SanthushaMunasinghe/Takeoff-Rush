@@ -150,20 +150,28 @@
 
   // --------------------------------------------------------------- weapons
 
-  // Is something `dx` ahead and `dy` off level in front of weapon `w`? Aircraft only
-  // engage what faces them: in range and inside a shallow cone, widened by `pad`.
-  TR.facing = function (w, dx, dy, pad) {
-    return dx > 0 && Math.hypot(dx, dy) <= w.range && Math.abs(dy) <= dx * Math.tan(w.cone) + pad;
+  // Which way an aircraft's weapon looks: planes along their flight path (so up the
+  // climb while they are still pitched), helicopters dead level.
+  TR.heading = (b) => (b.def.kind === 'plane' ? b.a : 0);
+
+  // Is something `dx` forward and `dy` up from a weapon `w` looking along `face`?
+  // Aircraft only engage what is in front of them: in range and inside a cone
+  // around their heading, widened by `pad`.
+  TR.facing = function (w, face, dx, dy, pad) {
+    const c = Math.cos(face), s = Math.sin(face);
+    const ahead = dx * c + dy * s, off = dy * c - dx * s;
+    return ahead > 0 && Math.hypot(dx, dy) <= w.range && Math.abs(off) <= ahead * Math.tan(w.cone) + pad;
   };
 
   // Nearest hostile facing `u`: aircraft, or (with `missiles`) incoming missiles instead.
   function pickTarget(G, u, w, missiles) {
+    const face = TR.heading(u);
     let best = null, bd = w.range;
     for (const e of G.units) {
       if (e.team === u.team || e.dead || (e.def.kind === 'missile') !== missiles) continue;
       const dx = (e.x - u.x) * u.team, dy = u.y - e.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > bd || !TR.facing(w, dx, dy, (u.def.radius + e.def.radius) * TR.HULL)) continue;
+      if (dist > bd || !TR.facing(w, face, dx, dy, (u.def.radius + e.def.radius) * TR.HULL)) continue;
       bd = dist; best = e;
     }
     return best;
@@ -179,20 +187,10 @@
     return false;
   }
 
-  // Stopped in mid-air. Once its opponent has stopped too, an aircraft slides level
-  // with it so the two end up nose to nose; planes also point their nose at it.
-  function hover(u, foe, dt) {
+  // Stopped in mid-air: it stays exactly where it is on its path, pitch included.
+  function hover(u, dt) {
     u.age += dt;
     u.vx = u.vy = 0;
-    if (foe && foe.hold) {
-      const rise = u.def.speed * 0.35 * dt;
-      const y = u.y + clamp(foe.y - u.y, -rise, rise);
-      if (y < u.y || y < GROUND - u.def.sit - 8) u.y = y;
-    }
-    if (u.def.kind !== 'plane') return;
-    const want = foe ? clamp(Math.atan2(u.y - foe.y, (foe.x - u.x) * u.team), -0.3, 0.3) : 0;
-    const turn = u.def.turn * 2 * dt;
-    u.a += clamp(want - u.a, -turn, turn);
   }
 
   function fire(G, u, e) {
@@ -203,8 +201,10 @@
       else { mx = u.x + u.team * Math.cos(u.a) * d.nose; my = u.y - Math.sin(u.a) * d.nose; }
       const tt = Math.hypot(e.x - mx, e.y - my) / w.speed;
       const tx = e.x + e.vx * tt - mx, ty = e.y + e.vy * tt - my;
-      // Guns only fire a little beyond the cone; a pair that has just stopped lines up first.
-      if (Math.abs(ty) > Math.abs(tx) * Math.tan(w.cone + 0.14)) return;
+      // Guns only fire a little beyond the cone around the heading.
+      const face = TR.heading(u), c = Math.cos(face), s = Math.sin(face);
+      const ahead = tx * u.team * c - ty * s, off = -ty * c - tx * u.team * s;
+      if (ahead <= 0 || Math.abs(off) > ahead * Math.tan(w.cone + 0.14)) return;
       const ang = Math.atan2(ty, tx) + rand(-w.spread, w.spread);
       G.shots.push({ k: 'bullet', team: u.team, x: mx, y: my, vx: Math.cos(ang) * w.speed, vy: Math.sin(ang) * w.speed, life: w.range / w.speed * 1.25, dmg: w.dmg });
       fx.spark(mx, my, 8);
@@ -287,7 +287,7 @@
       const foe = armed ? pickTarget(G, u, d.weapon, false) : null;
       u.hold = !!foe || queued(G, u);
       u.holdK = clamp(u.holdK + (u.hold ? dt : -dt) * 4, 0, 1);
-      if (u.hold) hover(u, foe, dt); else TR.stepBody(u, dt, units);
+      if (u.hold) hover(u, dt); else TR.stepBody(u, dt, units);
 
       if (u.hp < u.maxHp * 0.5) {
         u.smokeT -= dt;

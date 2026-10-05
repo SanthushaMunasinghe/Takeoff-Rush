@@ -39,7 +39,7 @@
         const dx = (p.x - b.x) * b.team, dy = b.y - p.y;
         const dist = Math.hypot(dx, dy);
         if (dist < closest) closest = dist;
-        if (w && TR.facing(w, dx, dy, (def.radius + pts.r) * TR.HULL)) { engage++; hold = true; }
+        if (w && TR.facing(w, TR.heading(b), dx, dy, (def.radius + pts.r) * TR.HULL)) { engage++; hold = true; }
       }
     }
     return { closest, engage };
