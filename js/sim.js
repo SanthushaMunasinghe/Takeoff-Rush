@@ -200,12 +200,7 @@
       if (d.kind === 'heli') { mx = u.x + u.team * 38; my = u.y + 13; }
       else { mx = u.x + u.team * Math.cos(u.a) * d.nose; my = u.y - Math.sin(u.a) * d.nose; }
       const tt = Math.hypot(e.x - mx, e.y - my) / w.speed;
-      const tx = e.x + e.vx * tt - mx, ty = e.y + e.vy * tt - my;
-      // Guns only fire a little beyond the cone around the heading.
-      const face = TR.heading(u), c = Math.cos(face), s = Math.sin(face);
-      const ahead = tx * u.team * c - ty * s, off = -ty * c - tx * u.team * s;
-      if (ahead <= 0 || Math.abs(off) > ahead * Math.tan(w.cone + 0.14)) return;
-      const ang = Math.atan2(ty, tx) + rand(-w.spread, w.spread);
+      const ang = Math.atan2(e.y + e.vy * tt - my, e.x + e.vx * tt - mx) + rand(-w.spread, w.spread);
       G.shots.push({ k: 'bullet', team: u.team, x: mx, y: my, vx: Math.cos(ang) * w.speed, vy: Math.sin(ang) * w.speed, life: w.range / w.speed * 1.25, dmg: w.dmg });
       fx.spark(mx, my, 8);
       sfx('gun');
