@@ -31,7 +31,7 @@ const TR = window.TR = {};
       cost: 3, hp: 90, speed: 130, radius: 24, baseDmg: 20,
       aMin: 16 * D, aMax: 52 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.009, turn: 1.0, dive: 0.5, accel: 0.7, roll: 0.5, sit: 24, previewLen: 300, nose: 44,
-      weapon: { type: 'gun', range: 170, cone: 14 * D, reload: 0.2, dmg: 6, speed: 820, spread: 0.05 },
+      weapon: { type: 'gun', range: 170, cone: 18 * D, reload: 0.2, dmg: 6, speed: 820, spread: 0.05 },
     },
     heli: {
       name: 'Helicopter', tag: 'Hangs back, long-range gun', kind: 'heli',
@@ -45,7 +45,7 @@ const TR = window.TR = {};
       cost: 7, hp: 280, speed: 65, radius: 38, baseDmg: 50,
       aMin: 14 * D, aMax: 46 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.014, turn: 0.9, dive: 0.4, accel: 0.9, roll: 0.7, sit: 34, previewLen: 290, nose: 64,
-      weapon: { type: 'bomb', range: 240, cone: 14 * D, reload: 2.2, dmg: 80, aoe: 70, speed: 300, g: 320 },
+      weapon: { type: 'bomb', range: 240, cone: 18 * D, reload: 2.2, dmg: 80, aoe: 70, speed: 300, g: 320 },
     },
     missile: {
       name: 'Missile', tag: 'Hunts the nearest enemy', kind: 'missile',
