@@ -13,14 +13,13 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 2. Drag the dotted arrow to set its launch direction. That decides how steeply it climbs and where in its altitude band it levels off.
 3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn.
 
-Every card costs fuel. You gain 3 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. Aircraft never collide; they open fire whenever an enemy is in range of their weapons. Few aircraft survive the crossing, so each one that reaches the far airport hits it hard (25–60 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
+Every card costs fuel. You gain 3 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. Aircraft fly for the enemy airport until an enemy aircraft is ahead of them, roughly level and inside weapon range; then both stop and trade fire until one goes down, and the survivor flies on. Aircraft in clearly different altitude lanes pass each other, so the launch direction decides who you fight. Each aircraft that reaches the far airport hits it (20–50 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
 
 | Card | Fuel | Role |
 | --- | --- | --- |
-| P-51 Mustang | 4 | Fast fighter, guns fire forward |
-| Helicopter | 3 | Flies low, swivelling front gun |
-| Bomber | 7 | Flies high, bombs whatever passes below, hits the airport hardest |
-| Missile Heli | 6 | Slow, fires homing rockets |
+| P-51 Mustang | 3 | Short range: closes right in and fires rapid bullets |
+| Helicopter | 5 | Long range: stops far back and guns from a distance |
+| Heavy Plane | 7 | Short range: lobs bombs, slow to reload but high damage, high health |
 | Missile | 4 | One-shot, hunts the nearest enemy; a direct hit downs a fighter |
 | Mortar | 2 | Lobbed shell with a big, heavy splash |
 

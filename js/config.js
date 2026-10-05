@@ -18,34 +18,30 @@ const TR = window.TR = {};
   // Angles are elevation above the horizon in the unit's own forward direction.
   // The launch angle picks both how steeply a unit climbs and where in its
   // altitude band (altLow..altHigh, screen y) it levels off.
+  // Aircraft fly for the enemy airport until a hostile aircraft is ahead of them
+  // inside weapon.range (and within weapon.cone of level); then they stop and
+  // trade fire until it is gone.
   TR.UNITS = {
     mustang: {
-      name: 'P-51 Mustang', tag: 'Fast, fires forward', kind: 'plane',
-      cost: 4, hp: 100, speed: 120, radius: 24, baseDmg: 30,
+      name: 'P-51 Mustang', tag: 'Closes right in, rapid guns', kind: 'plane',
+      cost: 3, hp: 90, speed: 130, radius: 24, baseDmg: 20,
       aMin: 16 * D, aMax: 42 * D, altLow: 430, altHigh: 190,
       gain: 0.007, turn: 1.0, dive: 0.5, accel: 0.7, roll: 0.5, sit: 24, previewLen: 300, nose: 44,
-      weapon: { type: 'gun', range: 330, cone: 28 * D, reload: 0.18, dmg: 6, speed: 820, spread: 0.07 },
+      weapon: { type: 'gun', range: 130, cone: 60 * D, reload: 0.2, dmg: 6, speed: 820, spread: 0.06 },
     },
     heli: {
-      name: 'Helicopter', tag: 'Flies low, swivel gun', kind: 'heli',
-      cost: 3, hp: 140, speed: 100, radius: 26, baseDmg: 25,
-      aMin: 50 * D, aMax: 82 * D, altLow: 528, altHigh: 425,
+      name: 'Helicopter', tag: 'Hangs back, long-range gun', kind: 'heli',
+      cost: 5, hp: 110, speed: 85, radius: 26, baseDmg: 25,
+      aMin: 50 * D, aMax: 82 * D, altLow: 520, altHigh: 330,
       gain: 0.018, turn: 2.2, dive: 0.5, accel: 0.6, sit: 25, previewLen: 210, nose: 34,
-      weapon: { type: 'gun', range: 270, cone: 50 * D, reload: 0.26, dmg: 4, speed: 760, spread: 0.08 },
+      weapon: { type: 'gun', range: 430, cone: 60 * D, reload: 0.4, dmg: 8, speed: 860, spread: 0.03 },
     },
-    bomber: {
-      name: 'Bomber', tag: 'Flies high, bombs below', kind: 'plane',
-      cost: 7, hp: 200, speed: 70, radius: 38, baseDmg: 60,
-      aMin: 28 * D, aMax: 44 * D, altLow: 240, altHigh: 115,
+    heavy: {
+      name: 'Heavy Plane', tag: 'Tough, lobs heavy bombs up close', kind: 'plane',
+      cost: 7, hp: 280, speed: 65, radius: 38, baseDmg: 50,
+      aMin: 28 * D, aMax: 44 * D, altLow: 380, altHigh: 130,
       gain: 0.009, turn: 0.9, dive: 0.4, accel: 0.9, roll: 0.7, sit: 34, previewLen: 290, nose: 64,
-      weapon: { type: 'bomb', reload: 0.6, dmg: 70, aoe: 85, g: 320, window: 55 },
-    },
-    mheli: {
-      name: 'Missile Heli', tag: 'Fires homing rockets', kind: 'heli',
-      cost: 6, hp: 160, speed: 80, radius: 30, baseDmg: 35,
-      aMin: 50 * D, aMax: 82 * D, altLow: 480, altHigh: 330,
-      gain: 0.016, turn: 2.2, dive: 0.5, accel: 0.6, sit: 27, previewLen: 210, nose: 40,
-      weapon: { type: 'rocket', range: 470, cone: 75 * D, reload: 3.2, dmg: 60, speed: 400, turn: 3.4, life: 2.3 },
+      weapon: { type: 'bomb', range: 190, cone: 60 * D, reload: 2.2, dmg: 80, aoe: 70, speed: 300, g: 320 },
     },
     missile: {
       name: 'Missile', tag: 'Hunts the nearest enemy', kind: 'missile',
@@ -80,7 +76,7 @@ const TR = window.TR = {};
   ];
 
   // Draw weights: each turn's hand is three different cards picked with these odds.
-  TR.DECK = { mustang: 5, heli: 4, bomber: 2, mheli: 2, missile: 2, mortar: 2 };
+  TR.DECK = { mustang: 5, heli: 3, heavy: 2, missile: 2, mortar: 2 };
 
   TR.clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   TR.lerp = (a, b, t) => a + (b - a) * t;

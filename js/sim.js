@@ -95,6 +95,7 @@
     b.hp = b.maxHp = def.hp;
     b.cool = rand(0.1, 0.4);
     b.flash = 0; b.dead = false; b.smokeT = 0;
+    b.hold = false; b.holdK = 0;
     G.units.push(b);
     if (def.kind === 'missile') { fx.dust(b.x - team * 20, 26); sfx('whoosh'); } else sfx('takeoff');
     return b;
@@ -149,25 +150,44 @@
 
   // --------------------------------------------------------------- weapons
 
-  function pickTarget(G, u, w) {
-    const face = u.def.kind === 'heli' ? 0 : u.a;
+  // Nearest hostile ahead of `u` and inside its weapon's reach: aircraft, or
+  // (with `missiles`) incoming missiles instead.
+  function pickTarget(G, u, w, missiles) {
     let best = null, bd = w.range;
     for (const e of G.units) {
-      if (e.team === u.team || e.dead) continue;
+      if (e.team === u.team || e.dead || (e.def.kind === 'missile') !== missiles) continue;
       const dx = (e.x - u.x) * u.team, dy = u.y - e.y;
       const dist = Math.hypot(dx, dy);
       if (dist > bd) continue;
-      if (Math.abs(Math.atan2(dy, dx) - face) > w.cone) continue;
+      if (Math.abs(Math.atan2(dy, dx)) > w.cone) continue;
       bd = dist; best = e;
     }
     return best;
   }
 
-  function fire(G, u) {
+  // A friendly aircraft holding position right ahead: wait behind it rather than fly through it.
+  function queued(G, u) {
+    for (const f of G.units) {
+      if (f === u || f.team !== u.team || f.dead || !f.hold) continue;
+      const dx = (f.x - u.x) * u.team, pad = f.def.radius + u.def.radius;
+      if (dx > 0 && dx < pad * 1.9 && Math.abs(f.y - u.y) < pad * 0.8) return true;
+    }
+    return false;
+  }
+
+  // Stopped in mid-air. Planes point their nose at whatever they are fighting.
+  function hover(u, foe, dt) {
+    u.age += dt;
+    u.vx = u.vy = 0;
+    if (u.def.kind !== 'plane') return;
+    const want = foe ? clamp(Math.atan2(u.y - foe.y, (foe.x - u.x) * u.team), -0.45, 0.45) : 0;
+    const turn = u.def.turn * 2 * dt;
+    u.a += clamp(want - u.a, -turn, turn);
+  }
+
+  function fire(G, u, e) {
     const d = u.def, w = d.weapon;
     if (w.type === 'gun') {
-      const e = pickTarget(G, u, w);
-      if (!e) return;
       let mx, my;
       if (d.kind === 'heli') { mx = u.x + u.team * 38; my = u.y + 13; }
       else { mx = u.x + u.team * Math.cos(u.a) * d.nose; my = u.y - Math.sin(u.a) * d.nose; }
@@ -176,30 +196,16 @@
       G.shots.push({ k: 'bullet', team: u.team, x: mx, y: my, vx: Math.cos(ang) * w.speed, vy: Math.sin(ang) * w.speed, life: w.range / w.speed * 1.25, dmg: w.dmg });
       fx.spark(mx, my, 8);
       sfx('gun');
-      u.cool = w.reload;
     } else if (w.type === 'bomb') {
-      for (const e of G.units) {
-        if (e.team === u.team || e.dead) continue;
-        const fall = e.y - u.y;
-        if (fall < 50) continue;
-        const tt = Math.sqrt(2 * fall / w.g);
-        if (Math.abs((u.x + u.vx * tt) - (e.x + e.vx * tt)) < w.window) {
-          G.shots.push({ k: 'bomb', team: u.team, x: u.x, y: u.y + 18, vx: u.vx, vy: 20, w });
-          sfx('drop');
-          u.cool = w.reload;
-          break;
-        }
-      }
-    } else if (w.type === 'rocket') {
-      const e = pickTarget(G, u, w);
-      if (!e) return;
-      G.shots.push({
-        k: 'rocket', team: u.team, x: u.x + u.team * 8, y: u.y + 18, ang: (u.team === 1 ? 0 : Math.PI) + u.team * 0.35,
-        sp: 130, target: e, life: w.life, w, puffT: 0,
-      });
-      sfx('whoosh');
-      u.cool = w.reload;
+      // Lobbed: the flat speed sets the flight time and the arc is solved to come down on the target.
+      const x = u.x + u.team * 12, y = u.y + 18;
+      const tt = Math.max(0.3, Math.hypot(e.x - x, e.y - y) / w.speed);
+      const tx = e.x + e.vx * tt, ty = e.y + e.vy * tt;
+      G.shots.push({ k: 'bomb', team: u.team, x, y, vx: (tx - x) / tt, vy: (ty - y) / tt - 0.5 * w.g * tt, w });
+      fx.puff(x, y, { r: 9, life: 0.4, col: '#f1ece4' });
+      sfx('drop');
     }
+    u.cool = w.reload;
   }
 
   // ------------------------------------------------------------------ step
@@ -240,26 +246,6 @@
       if (s.y >= GROUND - 6 || nearFoe(G, s.team, s.x, s.y, s.def.fuse)) { blast(G, s.team, s.x, Math.min(s.y, GROUND - 8), s.def.warhead); return true; }
       return s.x < -200 || s.x > W + 200;
     }
-    if (s.k === 'rocket') {
-      const w = s.w;
-      s.life -= dt;
-      s.sp = Math.min(w.speed, s.sp + 520 * dt);
-      const e = s.target;
-      if (e && !e.dead) {
-        const tt = Math.hypot(e.x - s.x, e.y - s.y) / w.speed * 0.6;
-        let diff = Math.atan2(e.y + e.vy * tt - s.y, e.x + e.vx * tt - s.x) - s.ang;
-        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        s.ang += clamp(diff, -w.turn * dt, w.turn * dt);
-      }
-      s.x += Math.cos(s.ang) * s.sp * dt; s.y += Math.sin(s.ang) * s.sp * dt;
-      s.puffT -= dt;
-      if (s.puffT <= 0) { s.puffT = 0.035; fx.puff(s.x, s.y, { r: 5.5, life: 0.45, vy: -6, col: '#f7f3ea', ink: false, back: true, grow: 0.7 }); }
-      const hit = nearFoe(G, s.team, s.x, s.y, 6);
-      if (hit) { hurt(G, hit, w.dmg); fx.boom(s.x, s.y, 30, Math.random() < 0.5); sfx('pop'); return true; }
-      if (s.y >= GROUND - 4) { fx.boom(s.x, GROUND - 8, 24, false); fx.dust(s.x, 16); sfx('pop'); return true; }
-      if (s.life <= 0) { fx.puff(s.x, s.y, { r: 12, life: 0.5 }); return true; }
-      return false;
-    }
     return true;
   }
 
@@ -268,10 +254,10 @@
     for (const u of units) {
       if (u.dead) continue;
       const d = u.def;
-      TR.stepBody(u, dt, units);
       if (u.flash > 0) u.flash -= dt;
 
       if (d.kind === 'missile') {
+        TR.stepBody(u, dt, units);
         u.smokeT -= dt;
         if (u.smokeT <= 0) { u.smokeT = 0.03; fx.puff(u.x - u.vx * 0.08, u.y - u.vy * 0.08, { r: 8, life: 0.6, vy: -8, col: '#f7f3ea', ink: false, back: true, grow: 0.8 }); }
         if (u.y > GROUND - 8 || nearFoe(G, u.team, u.x, u.y, d.fuse)) {
@@ -282,6 +268,13 @@
         }
         continue;
       }
+
+      // Aircraft fly on until a hostile aircraft is ahead in range, then stop and fight it.
+      const armed = u.age > 0.7;
+      const foe = armed ? pickTarget(G, u, d.weapon, false) : null;
+      u.hold = !!foe || queued(G, u);
+      u.holdK = clamp(u.holdK + (u.hold ? dt : -dt) * 4, 0, 1);
+      if (u.hold) hover(u, foe, dt); else TR.stepBody(u, dt, units);
 
       if (u.hp < u.maxHp * 0.5) {
         u.smokeT -= dt;
@@ -294,7 +287,11 @@
       if (u.team === 1 ? u.x >= W - TR.GOAL : u.x <= TR.GOAL) { arrive(G, u); continue; }
 
       u.cool -= dt;
-      if (u.cool <= 0 && u.age > 0.7) fire(G, u);
+      if (u.cool <= 0 && armed) {
+        // Guns also swat at passing missiles, without stopping for them.
+        const e = foe || (d.weapon.type === 'gun' ? pickTarget(G, u, d.weapon, true) : null);
+        if (e) fire(G, u, e);
+      }
     }
 
     for (let i = shots.length - 1; i >= 0; i--) {

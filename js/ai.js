@@ -10,11 +10,12 @@
   // How far a unit has travelled towards the base it is attacking.
   const progress = (u) => (u.team === 1 ? u.x : W - u.x);
 
+  // Where the enemy will be. Aircraft that have stopped to fight are assumed to stay put.
   function forecast(units) {
     return units.map((u) => {
       const b = Object.assign({}, u), pts = [];
       for (let i = 0; i < HORIZON; i++) {
-        TR.stepBody(b, STEP, null);
+        if (!u.hold) TR.stepBody(b, STEP, null);
         pts.push(progress(b) >= W - TR.GOAL ? null : { x: b.x, y: b.y });
       }
       return pts;
@@ -25,9 +26,11 @@
   function tryAngle(type, team, ang, tracks) {
     const def = TR.UNITS[type], w = def.weapon;
     const b = TR.makeBody(type, team, ang);
-    let closest = 1e9, engage = 0;
+    let closest = 1e9, engage = 0, hold = false;
     for (let i = 0; i < HORIZON; i++) {
-      TR.stepBody(b, STEP, null);
+      // like the real thing, an aircraft stops for as long as it has someone to shoot
+      if (!hold) TR.stepBody(b, STEP, null);
+      hold = false;
       if (b.y > TR.GROUND || b.x < 0 || b.x > W) break;
       for (const pts of tracks) {
         const p = pts[i];
@@ -35,11 +38,7 @@
         const dx = (p.x - b.x) * b.team, dy = b.y - p.y;
         const dist = Math.hypot(dx, dy);
         if (dist < closest) closest = dist;
-        if (w && w.range && dist < w.range) {
-          const face = def.kind === 'heli' ? 0 : b.a;
-          if (Math.abs(Math.atan2(dy, dx) - face) < w.cone) engage++;
-        }
-        if (w && w.type === 'bomb' && dy < -50 && Math.abs(dx) < 70) engage++;
+        if (w && dist < w.range && Math.abs(Math.atan2(dy, dx)) < w.cone) { engage++; hold = true; }
       }
     }
     return { closest, engage };
@@ -86,10 +85,9 @@
       } else {
         // Aircraft: mostly pick the lane with the most shooting, sometimes just vary it.
         pick = bestAngle(type, team, tracks, (r) => r.engage + rand(0, foes.length ? 6 : 50));
-        value = { mustang: 4.6, heli: 3.8, mheli: 5.4, bomber: 6.6 }[type];
+        value = { mustang: 4.4, heli: 5.2, heavy: 6.6 }[type];
         value += Math.min(3, pick.r.engage * 0.08);
         if (type === 'heli') value += urgent * 0.5;
-        if (type === 'mheli') value += Math.min(2, foes.length * 0.5);
       }
       const angle = Math.random() < s.aim ? pick.ang : lerp(def.aMin, def.aMax, Math.random());
       options.push({ type, angle, value: value + rand(0, s.noise), air: def.baseDmg > 0 });

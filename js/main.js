@@ -108,7 +108,8 @@
     ui.picked = -1; ui.aim = null; ui.aiming = false;
     // Where everything already in the air will travel during the next turn.
     G.paths = [];
-    for (const u of G.units) G.paths.push({ team: u.team, pts: TR.tracePath(u, { time: TURN_TIME }) });
+    // (aircraft that have stopped to fight are going nowhere for now)
+    for (const u of G.units) if (!u.hold) G.paths.push({ team: u.team, pts: TR.tracePath(u, { time: TURN_TIME }) });
     for (const s of G.shots) if (s.k === 'shell') G.paths.push({ team: s.team, pts: TR.tracePath(s, { time: TURN_TIME }) });
   }
 
@@ -330,7 +331,6 @@
       if (s.k === 'bullet') art.bullet(ctx, s);
       else if (s.k === 'bomb') art.bomb(ctx, s.x, s.y, Math.atan2(s.vy, s.vx), s.team);
       else if (s.k === 'shell') art.shell(ctx, s.x, s.y, Math.atan2(s.vy, s.vx), s.team);
-      else if (s.k === 'rocket') art.rocket(ctx, s.x, s.y, s.ang, s.team, t);
     }
     fx.draw(ctx, false, t);
     for (const u of G.units) hpBar(u);
@@ -417,9 +417,9 @@
       const span = W + 500, x = ((t * speed + off) % span) - 250;
       art.drawUnit(ctx, { def: UNITS[type], type, team, x: team === 1 ? x : W - x, y: y + Math.sin(t * 1.4 + off) * 14, a: a || 0, age: 9, id: off, flash: 0 }, t);
     };
-    fly('bomber', 1, 55, 96, 900);
+    fly('heavy', 1, 55, 96, 900);
     fly('mustang', 1, 130, 286, 200, 0.05);
-    fly('mheli', -1, 60, 300, 1250);
+    fly('heli', -1, 60, 300, 1250);
     fly('heli', -1, 85, 520, 500);
     fly('mustang', -1, 120, 150, 1500, -0.04);
 
