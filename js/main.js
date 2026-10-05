@@ -93,6 +93,13 @@
     return TR.tracePath(TR.makeBody(type, team, angle), { len: UNITS[type].previewLen });
   }
 
+  // The whole lane an aircraft will fly, climb included, so launches can be lined
+  // up with (or kept clear of) what is already in the air.
+  function routeFor(type, team, angle) {
+    if (!UNITS[type].weapon) return null;
+    return TR.tracePath(TR.makeBody(type, team, angle), { len: W - 2 * TR.SPAWN, cap: 40 });
+  }
+
   function startPlan(first) {
     G.phase = 'plan'; G.turn++; G.planT = 0;
     for (const k of [1, -1]) {
@@ -132,6 +139,7 @@
     const def = UNITS[p.type];
     p.angle = clamp(angle, def.aMin, def.aMax);
     p.pts = previewFor(p.type, 1, p.angle);
+    p.route = routeFor(p.type, 1, p.angle);
   }
 
   function aimAt(pt) {
@@ -219,7 +227,7 @@
         G.aiShown = true;
         const c = G.aiChoice;
         if (c) {
-          G.teams[-1].pending = { type: c.type, angle: c.angle, pop: 0, pts: previewFor(c.type, -1, c.angle) };
+          G.teams[-1].pending = { type: c.type, angle: c.angle, pop: 0, pts: previewFor(c.type, -1, c.angle), route: routeFor(c.type, -1, c.angle) };
           audio.play('click');
         }
       }
@@ -294,6 +302,7 @@
     ctx.closePath();
     ctx.fillStyle = 'rgba(79,157,255,0.22)'; ctx.fill();
     ctx.lineWidth = 2.5; ctx.setLineDash([10, 9]); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.stroke(); ctx.setLineDash([]);
+    if (p.route) art.dotted(ctx, p.route, 'rgba(44,108,214,0.8)', { r: 3.4, gap: 16, head: 0 });
     art.dotted(ctx, p.pts, '#4f9dff', { ink: true, r: 5, gap: 18, head: 28, offset: (G.time * 30) % 18 });
     if (ui.hintAim) {
       const tip = p.pts[p.pts.length - 1];
@@ -317,6 +326,7 @@
     if (G.phase === 'plan') {
       const foe = G.teams[-1].pending;
       if (foe) {
+        if (foe.route) art.dotted(ctx, foe.route, 'rgba(204,50,38,0.8)', { r: 3.4, gap: 16, head: 0 });
         art.dotted(ctx, foe.pts, '#ff5d4d', { ink: true, r: 5, gap: 18, head: 28, offset: (t * 30) % 18 });
         art.drawPending(ctx, foe.type, -1, foe.angle, t, foe.pop);
       } else {

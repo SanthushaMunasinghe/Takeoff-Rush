@@ -71,7 +71,7 @@
     const pts = [{ x: b.x, y: b.y }];
     const dt = 1 / 30;
     let len = 0, t = 0;
-    while ((o.len ? len < o.len : t < o.time) && t < 14) {
+    while ((o.len ? len < o.len : t < o.time) && t < (o.cap || 14)) {
       const px = b.x, py = b.y;
       TR.stepBody(b, dt, null);
       len += Math.hypot(b.x - px, b.y - py); t += dt;
@@ -150,16 +150,20 @@
 
   // --------------------------------------------------------------- weapons
 
-  // Nearest hostile ahead of `u` and inside its weapon's reach: aircraft, or
-  // (with `missiles`) incoming missiles instead.
+  // Is something `dx` ahead and `dy` off level in front of weapon `w`? Aircraft only
+  // engage what faces them: in range and inside a shallow cone, widened by `pad`.
+  TR.facing = function (w, dx, dy, pad) {
+    return dx > 0 && Math.hypot(dx, dy) <= w.range && Math.abs(dy) <= dx * Math.tan(w.cone) + pad;
+  };
+
+  // Nearest hostile facing `u`: aircraft, or (with `missiles`) incoming missiles instead.
   function pickTarget(G, u, w, missiles) {
     let best = null, bd = w.range;
     for (const e of G.units) {
       if (e.team === u.team || e.dead || (e.def.kind === 'missile') !== missiles) continue;
       const dx = (e.x - u.x) * u.team, dy = u.y - e.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > bd) continue;
-      if (Math.abs(Math.atan2(dy, dx)) > w.cone) continue;
+      if (dist > bd || !TR.facing(w, dx, dy, (u.def.radius + e.def.radius) * TR.HULL)) continue;
       bd = dist; best = e;
     }
     return best;
@@ -175,12 +179,18 @@
     return false;
   }
 
-  // Stopped in mid-air. Planes point their nose at whatever they are fighting.
+  // Stopped in mid-air. Once its opponent has stopped too, an aircraft slides level
+  // with it so the two end up nose to nose; planes also point their nose at it.
   function hover(u, foe, dt) {
     u.age += dt;
     u.vx = u.vy = 0;
+    if (foe && foe.hold) {
+      const rise = u.def.speed * 0.35 * dt;
+      const y = u.y + clamp(foe.y - u.y, -rise, rise);
+      if (y < u.y || y < GROUND - u.def.sit - 8) u.y = y;
+    }
     if (u.def.kind !== 'plane') return;
-    const want = foe ? clamp(Math.atan2(u.y - foe.y, (foe.x - u.x) * u.team), -0.45, 0.45) : 0;
+    const want = foe ? clamp(Math.atan2(u.y - foe.y, (foe.x - u.x) * u.team), -0.3, 0.3) : 0;
     const turn = u.def.turn * 2 * dt;
     u.a += clamp(want - u.a, -turn, turn);
   }
@@ -192,7 +202,10 @@
       if (d.kind === 'heli') { mx = u.x + u.team * 38; my = u.y + 13; }
       else { mx = u.x + u.team * Math.cos(u.a) * d.nose; my = u.y - Math.sin(u.a) * d.nose; }
       const tt = Math.hypot(e.x - mx, e.y - my) / w.speed;
-      const ang = Math.atan2(e.y + e.vy * tt - my, e.x + e.vx * tt - mx) + rand(-w.spread, w.spread);
+      const tx = e.x + e.vx * tt - mx, ty = e.y + e.vy * tt - my;
+      // Guns only fire more or less level; a pair that has just stopped lines up first.
+      if (Math.abs(ty) > Math.abs(tx) * Math.tan(w.cone * 2)) return;
+      const ang = Math.atan2(ty, tx) + rand(-w.spread, w.spread);
       G.shots.push({ k: 'bullet', team: u.team, x: mx, y: my, vx: Math.cos(ang) * w.speed, vy: Math.sin(ang) * w.speed, life: w.range / w.speed * 1.25, dmg: w.dmg });
       fx.spark(mx, my, 8);
       sfx('gun');

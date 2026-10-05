@@ -18,6 +18,7 @@
         if (!u.hold) TR.stepBody(b, STEP, null);
         pts.push(progress(b) >= W - TR.GOAL ? null : { x: b.x, y: b.y });
       }
+      pts.r = u.def.radius;
       return pts;
     });
   }
@@ -38,7 +39,7 @@
         const dx = (p.x - b.x) * b.team, dy = b.y - p.y;
         const dist = Math.hypot(dx, dy);
         if (dist < closest) closest = dist;
-        if (w && dist < w.range && Math.abs(Math.atan2(dy, dx)) < w.cone) { engage++; hold = true; }
+        if (w && TR.facing(w, dx, dy, (def.radius + pts.r) * TR.HULL)) { engage++; hold = true; }
       }
     }
     return { closest, engage };
@@ -47,8 +48,8 @@
   function bestAngle(type, team, tracks, score) {
     const def = TR.UNITS[type];
     let best = null;
-    for (let i = 0; i <= 10; i++) {
-      const ang = lerp(def.aMin, def.aMax, i / 10);
+    for (let i = 0; i <= 16; i++) {
+      const ang = lerp(def.aMin, def.aMax, i / 16);
       const r = tryAngle(type, team, ang, tracks);
       const s = score(r) + rand(0, 0.01);
       if (!best || s > best.s) best = { s, ang, r };
@@ -83,8 +84,10 @@
         pick = bestAngle(type, team, tracks, (r) => -r.closest);
         value = pick.r.closest < 75 ? 6.5 : pick.r.closest < 120 ? 3.5 : 0;
       } else {
-        // Aircraft: mostly pick the lane with the most shooting, sometimes just vary it.
-        pick = bestAngle(type, team, tracks, (r) => r.engage + rand(0, foes.length ? 6 : 50));
+        // Aircraft: mostly pick a lane with a fight in it; now and then, when nothing
+        // is bearing down on us, slip down an empty lane to reach the airport instead.
+        const lane = !urgent && Math.random() < 0.3 ? -1 : 1;
+        pick = bestAngle(type, team, tracks, (r) => lane * Math.min(r.engage, 12) + rand(0, foes.length ? 6 : 50));
         value = { mustang: 4.4, heli: 5.2, heavy: 6.6 }[type];
         value += Math.min(3, pick.r.engage * 0.08);
         if (type === 'heli') value += urgent * 0.5;
