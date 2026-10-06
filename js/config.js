@@ -17,7 +17,7 @@ const TR = window.TR = {};
 
   // Angles are elevation above the horizon in the unit's own forward direction.
   // Every aircraft shares one band of sky, from skimming the runway (LOW) up to
-  // just above the control towers (HIGH). The launch angle sets how steeply a
+  // high into the sky, just under the health bars (HIGH). The launch angle sets how steeply a
   // unit climbs and where in that band it levels off: aim low to stay low.
   //
   // Aircraft only see straight ahead: a detection cone 30 degrees wide (CONE is
@@ -28,7 +28,7 @@ const TR = window.TR = {};
   //
   // Health is sized in hits: the lightest hit in the game (a 20-damage bullet)
   // downs any aircraft in 5 to 7. Rockets, bombs and shells need fewer.
-  const LOW = 556, HIGH = 344;
+  const LOW = 556, HIGH = 110;
   const CONE = 15 * D;
   TR.HULL = 0.5;      // share of a target's radius that has to poke into the cone to be seen
   TR.UNITS = {
@@ -90,7 +90,7 @@ const TR = window.TR = {};
     { name: 'Ace', blurb: 'Hard. Aims everything, wastes nothing.', color: '#f2493a',
       income: 2, start: 7, hp: 110, pass: 0, random: 0, aim: 1, noise: 1, save: 0.2 },
     { name: 'Legend', blurb: 'Brutal. Sharper still, with a fortress of an airport.', color: '#9b5cf0',
-      income: 2, start: 8, hp: 150, pass: 0, random: 0, aim: 1, noise: 0.6, save: 0.2 },
+      income: 2, start: 8, hp: 130, pass: 0, random: 0, aim: 1, noise: 0.6, save: 0.2 },
   ];
 
   // The deck holds one of each card, so a hand never has duplicates. Each side
