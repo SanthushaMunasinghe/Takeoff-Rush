@@ -13,7 +13,7 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 2. Drag the dotted arrow to set its launch direction. That decides the curve it climbs and how high it levels off.
 3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn.
 
-Every card costs fuel. You gain 2 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. The opening hand is always three aircraft.
+Every card costs fuel. You gain 2 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. The opening hand only ever holds aircraft you can afford on your starting fuel (Mustang, Helicopter, Missile Heli), never a Bomber, Missile or Mortar.
 
 Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge); the Mustang's is a narrower 16 degrees. It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–60 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
 

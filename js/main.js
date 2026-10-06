@@ -104,7 +104,7 @@
         t.bank -= gain;
         t.fuel = Math.min(FUEL.max, t.fuel + gain);
       }
-      t.hand = TR.drawHand(first);   // the opening hand is all aircraft
+      t.hand = TR.drawHand(first);   // the opening hand is cheap aircraft only
       t.pending = null;
     }
     if (!first) { fx.float(486, 606, '+' + FUEL.perTurn, '#ffe55c', 34); audio.play('fuel'); }

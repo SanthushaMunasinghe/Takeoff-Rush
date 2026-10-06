@@ -102,12 +102,18 @@ const TR = window.TR = {};
   TR.pick = (arr) => arr[(Math.random() * arr.length) | 0];
   TR.spawnX = (team) => (team === 1 ? TR.SPAWN : TR.W - TR.SPAWN);
 
-  // `opening` deals aircraft only, so turn one always has something to send up.
+  // `opening` deals only aircraft cheap enough to launch on the starting fuel,
+  // so turn one always offers the low-cost units and never a card you can't play.
   TR.drawHand = function (opening) {
-    const pool = Object.assign({}, TR.DECK);
-    if (opening) for (const k in pool) if (!TR.UNITS[k].baseDmg) delete pool[k];
+    const deal = () => {
+      const pool = Object.assign({}, TR.DECK);
+      if (opening) for (const k in pool) if (!TR.UNITS[k].baseDmg || TR.UNITS[k].cost > TR.FUEL.start) delete pool[k];
+      return pool;
+    };
+    let pool = deal();
     const hand = [];
     while (hand.length < 3) {
+      if (!Object.keys(pool).length) pool = deal();   // fewer than three kinds qualify: repeats are fine
       let total = 0;
       for (const k in pool) total += pool[k];
       let r = Math.random() * total;
