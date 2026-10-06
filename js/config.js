@@ -20,43 +20,45 @@ const TR = window.TR = {};
   // the top of the control towers (HIGH). The launch angle sets how steeply a
   // unit climbs and where in that band it levels off: aim low to stay low.
   //
-  // Aircraft engage whatever hostile aircraft is facing them: inside weapon.range
-  // and within weapon.cone of the way they are heading (see TR.facing). Planes
-  // shoot as they fly past; units marked `stops` halt in mid-air and fight until
-  // it is gone.
+  // Aircraft only see straight ahead: a detection cone 30 degrees wide (CONE is
+  // its half-angle) reaching out to weapon.range along the way they are heading
+  // (see TR.facing). They engage hostile aircraft inside it and ignore anything
+  // flying above or below it. Planes shoot as they fly past; units marked `stops`
+  // halt in mid-air and fight until it is gone.
   //
   // Health is sized in hits: the lightest hit in the game (a 20-damage bullet)
   // downs any aircraft in 5 to 7. Rockets, bombs and shells need fewer.
   const LOW = 556, HIGH = 395;
-  TR.HULL = 0.5;      // share of both aircraft's radii added to the cone, so a lane is about a hull tall
+  const CONE = 15 * D;
+  TR.HULL = 0.5;      // share of a target's radius that has to poke into the cone to be seen
   TR.UNITS = {
     mustang: {
       name: 'P-51 Mustang', label: 'MUSTANG', tag: 'Long-range guns, never stops', kind: 'plane',
       cost: 2, hp: 120, speed: 130, radius: 24, baseDmg: 30,
       aMin: 3 * D, aMax: 46 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.012, turn: 1.0, dive: 0.5, accel: 0.7, roll: 0.5, sit: 24, previewLen: 300, nose: 44,
-      weapon: { type: 'gun', range: 380, cone: 20 * D, reload: 0.8, dmg: 20, speed: 820, spread: 0.035 },
+      weapon: { type: 'gun', range: 380, cone: CONE, reload: 0.8, dmg: 20, speed: 820, spread: 0.035 },
     },
     heli: {
       name: 'Helicopter', label: 'HELI', tag: 'Short range, stops to fight', kind: 'heli', stops: true,
       cost: 2, hp: 100, speed: 90, radius: 26, baseDmg: 25,
       aMin: 8 * D, aMax: 66 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.018, turn: 2.2, dive: 0.5, accel: 0.6, sit: 25, previewLen: 230, nose: 34,
-      weapon: { type: 'gun', range: 190, cone: 30 * D, reload: 0.45, dmg: 20, speed: 760, spread: 0.05 },
+      weapon: { type: 'gun', range: 190, cone: CONE, reload: 0.45, dmg: 20, speed: 760, spread: 0.05 },
     },
     mheli: {
       name: 'Missile Heli', label: 'MISSILE HELI', tag: 'Tough, slow long-range rockets, stops to fight', kind: 'heli', stops: true,
       cost: 3, hp: 140, speed: 70, radius: 30, baseDmg: 35,
       aMin: 8 * D, aMax: 66 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.016, turn: 2.2, dive: 0.5, accel: 0.6, sit: 27, previewLen: 230, nose: 40,
-      weapon: { type: 'rocket', range: 460, cone: 18 * D, reload: 2.2, dmg: 40, speed: 400, turn: 3.4, life: 2.3 },
+      weapon: { type: 'rocket', range: 460, cone: CONE, reload: 2.2, dmg: 40, speed: 400, turn: 3.4, life: 2.3 },
     },
     bomber: {
       name: 'Bomber', label: 'BOMBER', tag: 'Short range, slow heavy bombs', kind: 'plane',
       cost: 2, hp: 120, speed: 105, radius: 38, baseDmg: 45,
       aMin: 3 * D, aMax: 46 * D, altLow: LOW, altHigh: HIGH,
       gain: 0.014, turn: 0.9, dive: 0.4, accel: 0.9, roll: 0.7, sit: 34, previewLen: 290, nose: 64,
-      weapon: { type: 'bomb', range: 220, cone: 30 * D, reload: 1.9, dmg: 60, aoe: 80, speed: 300, g: 320 },
+      weapon: { type: 'bomb', range: 220, cone: CONE, reload: 1.9, dmg: 60, aoe: 80, speed: 300, g: 320 },
     },
     missile: {
       name: 'Missile', label: 'MISSILE', tag: 'Hunts the nearest enemy, one-hit kill', kind: 'missile',

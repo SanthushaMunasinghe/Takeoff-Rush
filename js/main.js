@@ -307,6 +307,22 @@
     }
   }
 
+  // The wedge of sky an aircraft watches: it only engages enemies inside it.
+  function cone(u) {
+    const w = u.def.weapon;
+    if (!w || u.age < 0.7) return;
+    const col = u.team === 1 ? '79,157,255' : '255,93,77', k = G.phase === 'plan' ? 1 : 0.55;
+    ctx.save();
+    ctx.translate(u.x, u.y); ctx.scale(u.team, 1); ctx.rotate(-TR.heading(u));
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, w.range);
+    g.addColorStop(0, 'rgba(' + col + ',' + (0.3 * k).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(' + col + ',' + (0.05 * k).toFixed(3) + ')');
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, w.range, -w.cone, w.cone); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(' + col + ',' + (0.35 * k).toFixed(3) + ')'; ctx.stroke();
+    ctx.restore();
+  }
+
   function drawWorld() {
     const t = G.time;
     if (G.phase === 'plan') {
@@ -314,6 +330,7 @@
         art.dotted(ctx, p.pts, p.team === 1 ? 'rgba(44,108,214,0.5)' : 'rgba(204,50,38,0.5)', { r: 3.2, gap: 13, head: 15 });
       }
     }
+    for (const u of G.units) cone(u);
     for (const u of G.units) shadow(u.x, u.y, u.def.radius);
     for (const s of G.shots) if (s.k === 'bomb' || s.k === 'shell') shadow(s.x, s.y, 9);
     fx.draw(ctx, true, t);

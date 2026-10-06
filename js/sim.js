@@ -155,8 +155,8 @@
   TR.heading = (b) => (b.def.kind === 'plane' ? b.a : 0);
 
   // Is something `dx` forward and `dy` up from a weapon `w` looking along `face`?
-  // Aircraft only engage what is in front of them: in range and inside a cone
-  // around their heading, widened by `pad`.
+  // Aircraft only engage what is in front of them: in range and inside the cone
+  // around their heading. `pad` lets a target count once its hull pokes in.
   TR.facing = function (w, face, dx, dy, pad) {
     const c = Math.cos(face), s = Math.sin(face);
     const ahead = dx * c + dy * s, off = dy * c - dx * s;
@@ -171,7 +171,7 @@
       if (e.team === u.team || e.dead || (e.def.kind === 'missile') !== missiles) continue;
       const dx = (e.x - u.x) * u.team, dy = u.y - e.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > bd || !TR.facing(w, face, dx, dy, (u.def.radius + e.def.radius) * TR.HULL)) continue;
+      if (dist > bd || !TR.facing(w, face, dx, dy, e.def.radius * TR.HULL)) continue;
       bd = dist; best = e;
     }
     return best;

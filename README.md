@@ -15,7 +15,7 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 
 Every card costs fuel. You gain 1 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. The opening hand is always three aircraft.
 
-Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Aircraft engage any enemy aircraft facing them, inside weapon range and within a cone of the way they are heading. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–45 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
+Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge). It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–45 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
 
 A bullet does 20 damage, and every aircraft goes down in 5 to 7 bullets. Rockets, bombs and shells need fewer hits.
 
