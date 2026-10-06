@@ -103,8 +103,12 @@
 
   // ---------------------------------------------------------------- damage
 
+  // Missiles are indestructible: nothing targets them, hits them or sets them off
+  // early. They only end by reaching an aircraft, the ground or the edge of the field.
+  const solid = (e) => e.def.kind !== 'missile';
+
   function hurt(G, e, dmg) {
-    if (e.dead) return;
+    if (e.dead || !solid(e)) return;
     e.hp -= dmg;
     e.flash = 0.14;
     if (e.hp <= 0) kill(G, e);
@@ -163,12 +167,12 @@
     return ahead > 0 && Math.hypot(dx, dy) <= w.range && Math.abs(off) <= ahead * Math.tan(w.cone) + pad;
   };
 
-  // Nearest hostile facing `u`: aircraft, or (with `missiles`) incoming missiles instead.
-  function pickTarget(G, u, w, missiles) {
+  // Nearest hostile aircraft facing `u`.
+  function pickTarget(G, u, w) {
     const face = TR.heading(u);
     let best = null, bd = w.range;
     for (const e of G.units) {
-      if (e.team === u.team || e.dead || (e.def.kind === 'missile') !== missiles) continue;
+      if (e.team === u.team || e.dead || !solid(e)) continue;
       const dx = (e.x - u.x) * u.team, dy = u.y - e.y;
       const dist = Math.hypot(dx, dy);
       if (dist > bd || !TR.facing(w, face, dx, dy, e.def.radius * TR.HULL)) continue;
@@ -227,7 +231,7 @@
 
   function nearFoe(G, team, x, y, pad) {
     for (const e of G.units) {
-      if (e.team === team || e.dead) continue;
+      if (e.team === team || e.dead || !solid(e)) continue;
       if (Math.hypot(e.x - x, e.y - y) < pad + e.def.radius * 0.6) return e;
     }
     return null;
@@ -238,7 +242,7 @@
       s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
       if (s.life <= 0 || s.y > GROUND) return true;
       for (const e of G.units) {
-        if (e.team === s.team || e.dead) continue;
+        if (e.team === s.team || e.dead || !solid(e)) continue;
         if (Math.hypot(e.x - s.x, e.y - s.y) < e.def.radius * 0.85) {
           hurt(G, e, s.dmg);
           fx.spark(s.x, s.y, 10);
@@ -305,7 +309,7 @@
       // Aircraft shoot whatever hostile aircraft is ahead in range. Planes do it on
       // the move; units that stop halt where they are until it is gone.
       const armed = u.age > 0.7;
-      const foe = armed ? pickTarget(G, u, d.weapon, false) : null;
+      const foe = armed ? pickTarget(G, u, d.weapon) : null;
       u.hold = !!d.stops && (!!foe || queued(G, u));
       u.holdK = clamp(u.holdK + (u.hold ? dt : -dt) * 4, 0, 1);
       if (u.hold) hover(u, dt); else TR.stepBody(u, dt, units);
@@ -322,9 +326,7 @@
 
       u.cool -= dt;
       if (u.cool <= 0 && armed) {
-        // Guns also swat at passing missiles, without stopping for them.
-        const e = foe || (d.weapon.type === 'gun' ? pickTarget(G, u, d.weapon, true) : null);
-        if (e) fire(G, u, e);
+        if (foe) fire(G, u, foe);
       }
     }
 

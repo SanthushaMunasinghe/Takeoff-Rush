@@ -61,8 +61,8 @@ const TR = window.TR = {};
       weapon: { type: 'bomb', range: 220, cone: CONE, reload: 1.9, dmg: 60, aoe: 80, speed: 300, g: 320 },
     },
     missile: {
-      name: 'Missile', label: 'MISSILE', tag: 'Hunts the nearest enemy, one-hit kill', kind: 'missile',
-      cost: 7, hp: 20, speed: 330, radius: 16, baseDmg: 0,
+      name: 'Missile', label: 'MISSILE', tag: 'Unstoppable, hunts the nearest enemy, one-hit kill', kind: 'missile',
+      cost: 7, speed: 330, radius: 16, baseDmg: 0,
       aMin: 2 * D, aMax: 40 * D, altLow: LOW + 6, altHigh: HIGH,
       gain: 0.012, turn: 2.0, dive: 1.1, accel: 0.5, sit: 30, previewLen: 320, nose: 26,
       seekRange: 430, seekCone: 60 * D, fuse: 30,

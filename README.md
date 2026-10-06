@@ -25,7 +25,7 @@ A bullet does 20 damage, and every aircraft goes down in 5 to 7 bullets. Rockets
 | Helicopter | 3 | 5 hits | Short-range gun, stops to fight |
 | Missile Heli | 5 | 7 hits | Long-range homing rockets, slow to reload, stops to fight |
 | Bomber | 7 | 6 hits | Short range, lobs heavy bombs slowly, hits the airport hardest |
-| Missile | 7 | | One-shot, hunts the nearest enemy and kills it outright |
+| Missile | 7 | can't be shot down | One-shot, hunts the nearest enemy and kills it outright |
 | Mortar | 4 | | Lobbed shell with a big, heavy splash |
 
 Desktop keys: `1`–`3` pick a card, `↑`/`↓` aim, `Space` continues, `←`/`→` change difficulty on the menu.
