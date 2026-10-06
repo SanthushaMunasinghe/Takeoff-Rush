@@ -61,16 +61,29 @@
   // override these: `pass` = chance of dithering a turn away, `random` = chance of
   // playing any old card, `aim` = chance of bothering to aim, `noise` = fuzz on
   // how it rates its cards, `save` = willingness to bank fuel for a big unit.
-  const SHARP = { pass: 0, random: 0, aim: 1, noise: 2.2, save: 0.45 };
+  const SHARP = { pass: 0, random: 0, aim: 1, noise: 2.2, save: 0.25 };
+
+  // Fuel only trickles in, so the pricier cards happen by saving up. After each
+  // launch the computer decides how full a tank it wants before it spends again:
+  // usually just enough for the cheapest aircraft, sometimes enough for a big card.
+  function fuelGoal(s) {
+    const costs = Object.keys(TR.DECK).map((k) => TR.UNITS[k]);
+    const cheapest = Math.min.apply(null, costs.filter((d) => d.baseDmg).map((d) => d.cost));
+    const big = costs.map((d) => d.cost).filter((c) => c > cheapest);
+    return big.length && Math.random() < s.save ? TR.pick(big) : cheapest;
+  }
 
   TR.aiPlan = function (G, team, skill) {
     const s = Object.assign({}, SHARP, skill);
     const me = G.teams[team];
-    const income = me.income || TR.FUEL.perTurn;
     if (Math.random() < s.pass) return null;
     const foes = G.units.filter((u) => u.team !== team && !u.dead && u.def.kind !== 'missile');
     const tracks = forecast(foes);
     const urgent = foes.filter((u) => progress(u) > W * 0.5).length;
+    // Keep saving towards the fuel goal unless something is bearing down on us.
+    if (me.aiGoal == null) me.aiGoal = fuelGoal(s);
+    if (!urgent && me.fuel < Math.min(me.aiGoal, TR.FUEL.max)) return null;
+    const spend = (o) => { me.aiGoal = fuelGoal(s); return { type: o.type, angle: o.angle }; };
     const options = [];
 
     for (const type of me.hand) {
@@ -88,7 +101,7 @@
         // is bearing down on us, slip down an empty lane to reach the airport instead.
         const lane = !urgent && Math.random() < 0.3 ? -1 : 1;
         pick = bestAngle(type, team, tracks, (r) => lane * Math.min(r.engage, 12) + rand(0, foes.length ? 6 : 50));
-        value = { mustang: 5, heli: 4.4, mheli: 5.2, bomber: 5 }[type];
+        value = { mustang: 5, heli: 4.4, mheli: 6.2, bomber: 7.5 }[type];
         value += Math.min(3, pick.r.engage * 0.08);
         if (def.stops) value += urgent * 0.5;   // something to park in the way
       }
@@ -97,13 +110,8 @@
     }
     if (!options.length) return null;
     if (Math.random() < s.random) {
-      const any = TR.pick(options);
-      return { type: any.type, angle: any.angle };
+      return spend(TR.pick(options));
     }
-
-    // Bank fuel for a heavy hitter in hand when nothing is bearing down on us.
-    const dream = me.hand.find((t) => TR.UNITS[t].cost > me.fuel && TR.UNITS[t].cost <= me.fuel + income && TR.UNITS[t].cost >= 3);
-    if (dream && urgent === 0 && Math.random() < s.save) return null;
 
     options.sort((a, b) => b.value - a.value);
     let choice = options[0];
@@ -112,6 +120,6 @@
       if (me.fuel < TR.FUEL.max - 1) return null;
       choice = options.find((o) => o.air) || null;
     }
-    return choice && { type: choice.type, angle: choice.angle };
+    return choice && spend(choice);
   };
 })();

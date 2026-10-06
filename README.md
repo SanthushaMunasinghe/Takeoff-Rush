@@ -13,20 +13,20 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 2. Drag the dotted arrow to set its launch direction. That decides the curve it climbs and how high it levels off.
 3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn.
 
-Every card costs fuel. You gain 1 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. The opening hand is always three aircraft.
+Every card costs fuel. You gain 2 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. The opening hand is always three aircraft.
 
-Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge). It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–45 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
+Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge); the Mustang's is a narrower 16 degrees. It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–60 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
 
 A bullet does 20 damage, and every aircraft goes down in 5 to 7 bullets. Rockets, bombs and shells need fewer hits.
 
 | Card | Fuel | Health | Role |
 | --- | --- | --- | --- |
-| P-51 Mustang | 2 | 6 hits | Long-range guns, fast, never stops |
-| Helicopter | 2 | 5 hits | Short-range gun, stops to fight |
-| Missile Heli | 3 | 7 hits | Long-range homing rockets, slow to reload, stops to fight |
-| Bomber | 2 | 6 hits | Short range, lobs heavy bombs slowly, hits the airport hardest |
-| Missile | 5 | | One-shot, hunts the nearest enemy and kills it outright |
-| Mortar | 2 | | Lobbed shell with a big, heavy splash |
+| P-51 Mustang | 3 | 6 hits | Long-range guns in a narrow cone, fast, never stops |
+| Helicopter | 3 | 5 hits | Short-range gun, stops to fight |
+| Missile Heli | 5 | 7 hits | Long-range homing rockets, slow to reload, stops to fight |
+| Bomber | 7 | 6 hits | Short range, lobs heavy bombs slowly, hits the airport hardest |
+| Missile | 7 | | One-shot, hunts the nearest enemy and kills it outright |
+| Mortar | 4 | | Lobbed shell with a big, heavy splash |
 
 Desktop keys: `1`–`3` pick a card, `↑`/`↓` aim, `Space` continues, `←`/`→` change difficulty on the menu.
 
@@ -36,10 +36,10 @@ Pick the opponent before every match (title screen and result screen). It starts
 
 | Level | Feel | What changes |
 | --- | --- | --- |
-| Noob | Very easy | Plays random cards, never aims, gains fuel only every other turn |
+| Noob | Very easy | Plays random cards, never aims, gains only 1 fuel a turn |
 | Rookie | Winnable | Mostly random cards, rarely aims, 80-health airport |
 | Veteran | Some difficulty | Often picks and aims well, with regular mistakes |
-| Ace | Hard | Always picks and aims its best, opens with 7 fuel and a 120-health airport |
+| Ace | Hard | Always picks and aims its best, opens with 7 fuel and a 130-health airport |
 | Legend | Very hard | Sharper again, opens with 8 fuel and a 180-health airport |
 
 The computer always draws from the same cards and launches at most one per turn, like you. Levels change how well it plays, plus its opening fuel and airport health (and, for Noob, how fast it refuels). Level settings live in `TR.LEVELS` in `js/config.js`.
