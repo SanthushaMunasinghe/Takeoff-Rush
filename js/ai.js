@@ -1,7 +1,7 @@
 'use strict';
 
 // Computer opponent. It plays by the same rules as the player: same fuel
-// income, a random hand of three, one launch per turn. It never sees what the
+// income, its own deck with a hand of four, one launch per turn. It never sees what the
 // player is about to launch this turn, only what is already in the air.
 (function () {
   const { W, rand, lerp } = TR;
@@ -63,16 +63,6 @@
   // how it rates its cards, `save` = willingness to bank fuel for a big unit.
   const SHARP = { pass: 0, random: 0, aim: 1, noise: 2.2, save: 0.25 };
 
-  // Fuel only trickles in, so the pricier cards happen by saving up. After each
-  // launch the computer decides how full a tank it wants before it spends again:
-  // usually just enough for the cheapest aircraft, sometimes enough for a big card.
-  function fuelGoal(s) {
-    const costs = Object.keys(TR.DECK).map((k) => TR.UNITS[k]);
-    const cheapest = Math.min.apply(null, costs.filter((d) => d.baseDmg).map((d) => d.cost));
-    const big = costs.map((d) => d.cost).filter((c) => c > cheapest);
-    return big.length && Math.random() < s.save ? TR.pick(big) : cheapest;
-  }
-
   TR.aiPlan = function (G, team, skill) {
     const s = Object.assign({}, SHARP, skill);
     const me = G.teams[team];
@@ -80,15 +70,17 @@
     const foes = G.units.filter((u) => u.team !== team && !u.dead && u.def.kind !== 'missile');
     const tracks = forecast(foes);
     const urgent = foes.filter((u) => progress(u) > W * 0.5).length;
-    // Keep saving towards the fuel goal unless something is bearing down on us.
-    if (me.aiGoal == null) me.aiGoal = fuelGoal(s);
-    if (!urgent && me.fuel < Math.min(me.aiGoal, TR.FUEL.max)) return null;
-    const spend = (o) => { me.aiGoal = fuelGoal(s); return { type: o.type, angle: o.angle }; };
-    const options = [];
+    const spend = (o) => {
+      // after each launch, decide whether to hold out for a big card next time
+      me.aiHold = Math.random() < s.save;
+      return { type: o.type, angle: o.angle, slot: o.slot };
+    };
+    if (me.aiHold === undefined) me.aiHold = Math.random() < s.save;
 
-    for (const type of me.hand) {
-      const def = TR.UNITS[type];
-      if (def.cost > me.fuel) continue;
+    // Rate every card in hand, affordable or not.
+    const all = [];
+    for (let slot = 0; slot < me.hand.length; slot++) {
+      const type = me.hand[slot], def = TR.UNITS[type];
       let value, pick;
       if (type === 'missile') {
         pick = bestAngle(type, team, tracks, (r) => -r.closest);
@@ -101,24 +93,32 @@
         // is bearing down on us, slip down an empty lane to reach the airport instead.
         const lane = !urgent && Math.random() < 0.3 ? -1 : 1;
         pick = bestAngle(type, team, tracks, (r) => lane * Math.min(r.engage, 12) + rand(0, foes.length ? 6 : 50));
-        value = { mustang: 5, heli: 4.4, mheli: 6.2, bomber: 7.5 }[type];
+        value = { mustang: 6, heli: 5, mheli: 4.5, bomber: 4 }[type];
         value += Math.min(3, pick.r.engage * 0.08);
         if (def.stops) value += urgent * 0.5;   // something to park in the way
       }
       const angle = Math.random() < s.aim ? pick.ang : lerp(def.aMin, def.aMax, Math.random());
-      options.push({ type, angle, value: value + rand(0, s.noise), air: def.baseDmg > 0 });
+      all.push({ slot, type, angle, cost: def.cost, value: value + rand(0, s.noise), air: def.baseDmg > 0 });
     }
+    const options = all.filter((o) => o.cost <= me.fuel);
     if (!options.length) return null;
-    if (Math.random() < s.random) {
-      return spend(TR.pick(options));
+    if (Math.random() < s.random) return spend(TR.pick(options));
+
+    // Cards stay in hand until played, so now and then it saves up for the dearest
+    // one it is holding, as long as nothing is bearing down on the airport.
+    if (me.aiHold && !urgent) {
+      const want = all.reduce((a, b) => (b.cost > a.cost ? b : a));
+      if (want.cost > me.fuel) return null;
+      if (want.air || want.value > 0) return spend(want);   // but never a missile or mortar at nothing
     }
 
     options.sort((a, b) => b.value - a.value);
     let choice = options[0];
     if (choice.value < 2.4) {
-      // Nothing worth shooting at: only spend if fuel would otherwise overflow.
+      // Nothing worth shooting at: only spend if fuel would otherwise overflow,
+      // on an aircraft if there is one, else on anything just to turn the deck over.
       if (me.fuel < TR.FUEL.max - 1) return null;
-      choice = options.find((o) => o.air) || null;
+      choice = options.find((o) => o.air) || (me.fuel >= TR.FUEL.max ? options[options.length - 1] : null);
     }
     return choice && spend(choice);
   };

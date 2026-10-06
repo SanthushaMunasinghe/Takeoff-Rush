@@ -88,13 +88,18 @@ const TR = window.TR = {};
     { name: 'Veteran', blurb: 'A fair fight. Starts to counter you.', color: '#ff8a1e',
       income: 2, start: 5, hp: 100, pass: 0.05, random: 0.45, aim: 0.6, noise: 3, save: 0.3 },
     { name: 'Ace', blurb: 'Hard. Aims everything, wastes nothing.', color: '#f2493a',
-      income: 2, start: 7, hp: 130, pass: 0, random: 0, aim: 1, noise: 1, save: 0.2 },
+      income: 2, start: 7, hp: 110, pass: 0, random: 0, aim: 1, noise: 1, save: 0.2 },
     { name: 'Legend', blurb: 'Brutal. Sharper still, with a fortress of an airport.', color: '#9b5cf0',
-      income: 2, start: 8, hp: 180, pass: 0, random: 0, aim: 1, noise: 0.6, save: 0.2 },
+      income: 2, start: 8, hp: 150, pass: 0, random: 0, aim: 1, noise: 0.6, save: 0.2 },
   ];
 
-  // Draw weights: each turn's hand is three different cards picked with these odds.
+  // The deck holds one of each card, so a hand never has duplicates. Each side
+  // holds HAND of them and can see which one is coming next. Playing a card puts
+  // it back in the deck and the "next" card takes its slot; a new "next" is then
+  // drawn at random from the cards not in hand, with these odds. Unplayed cards
+  // stay put.
   TR.DECK = { mustang: 4, heli: 4, mheli: 2, bomber: 3, missile: 2, mortar: 2 };
+  TR.HAND = 4;
 
   TR.clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   TR.lerp = (a, b, t) => a + (b - a) * t;
@@ -102,26 +107,41 @@ const TR = window.TR = {};
   TR.pick = (arr) => arr[(Math.random() * arr.length) | 0];
   TR.spawnX = (team) => (team === 1 ? TR.SPAWN : TR.W - TR.SPAWN);
 
-  // `opening` deals only aircraft cheap enough to launch on the starting fuel,
-  // so turn one always offers the low-cost units and never a card you can't play.
-  TR.drawHand = function (opening) {
-    const deal = () => {
-      const pool = Object.assign({}, TR.DECK);
-      if (opening) for (const k in pool) if (!TR.UNITS[k].baseDmg || TR.UNITS[k].cost > TR.FUEL.start) delete pool[k];
-      return pool;
-    };
-    let pool = deal();
-    const hand = [];
-    while (hand.length < 3) {
-      if (!Object.keys(pool).length) pool = deal();   // fewer than three kinds qualify: repeats are fine
-      let total = 0;
-      for (const k in pool) total += pool[k];
-      let r = Math.random() * total;
-      for (const k in pool) {
-        r -= pool[k];
-        if (r <= 0) { hand.push(k); delete pool[k]; break; }
-      }
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0, c = a[i];
+      a[i] = a[j]; a[j] = c;
     }
-    return hand;
+    return a;
+  }
+
+  // The card that will be dealt next: any card not already in hand, by deck odds.
+  function drawNext(t) {
+    const pool = Object.keys(TR.DECK).filter((k) => t.hand.indexOf(k) < 0);
+    let r = Math.random() * pool.reduce((sum, k) => sum + TR.DECK[k], 0);
+    for (const k of pool) {
+      r -= TR.DECK[k];
+      if (r <= 0) return k;
+    }
+    return pool[pool.length - 1];
+  }
+
+  // Deal team `t` its opening hand and first "next" card. The opening hand puts
+  // aircraft first, cheapest-to-launch ahead of the rest, so turn one always
+  // offers the low-cost units and never a missile or mortar.
+  TR.dealDeck = function (t) {
+    const rank = (k) => (!TR.UNITS[k].baseDmg ? 2 : TR.UNITS[k].cost <= TR.FUEL.start ? 0 : 1);
+    const cards = shuffle(Object.keys(TR.DECK)).sort((a, b) => rank(a) - rank(b));
+    t.hand = shuffle(cards.slice(0, TR.HAND));
+    t.next = drawNext(t);
+  };
+
+  // Play the card in hand slot `i`: it goes back in the deck, the "next" card
+  // takes its slot, and a new "next" is drawn.
+  TR.cycleCard = function (t, i) {
+    const played = t.hand[i];
+    t.hand[i] = t.next;
+    t.next = drawNext(t);
+    return played;
   };
 })();

@@ -17,13 +17,13 @@
   const view = { scale: 1, dpr: 1, ox: 0, oy: 0, left: 0, right: W, top: 0, bottom: H, hudTop: 0 };
 
   const G = TR.G = { phase: 'menu', time: 0, turn: 0, units: [], shots: [], paths: [], teams: null };
-  const ui = { picked: -1, aim: null, aiming: false, cardsT: 0, deny: -1, denyT: 0, press: 0, hintPick: true, hintAim: true, level: 0 };
+  const ui = { picked: -1, aim: null, aiming: false, cardsT: 0, deny: -1, denyT: 0, press: 0, hintPick: true, hintAim: true, level: 0, fresh: -1 };
   const LEVELS = TR.LEVELS;
   let acc = 0;
 
   // ---------------------------------------------------------------- layout
 
-  const CARD = { w: 108, h: 136, gap: 16, y: 580 };   // kept below the lowest flight lane
+  const CARD = { w: 108, h: 136, gap: 16, x: 606, y: 580 };   // kept below the lowest flight lane
   const BTN_GO = { x: 1262, y: 624, w: 250, h: 80 };
   const BTN_PLAY = { x: W / 2 - 160, y: 462, w: 320, h: 90 };
   const BTN_AGAIN = { x: W / 2 - 170, y: 502, w: 340, h: 88 };
@@ -40,10 +40,12 @@
     return -1;
   }
 
+  // The hand sits a little right of centre, leaving room for the "next" card and the fuel gauge.
   function cardRect(i) {
-    const total = 3 * CARD.w + 2 * CARD.gap;
-    return { x: W / 2 - total / 2 + i * (CARD.w + CARD.gap), y: CARD.y, w: CARD.w, h: CARD.h };
+    return { x: CARD.x + i * (CARD.w + CARD.gap), y: CARD.y, w: CARD.w, h: CARD.h };
   }
+  const NEXT = { x: 548, y: 662, scale: 0.62 };   // centre of the small preview of the next card
+  const FUEL_X = 242;
   function muteRect() { return { x: W / 2 + 92, y: view.hudTop + 18, w: 46, h: 46 }; }
   function hit(r, p, pad) {
     pad = pad || 0;
@@ -76,7 +78,7 @@
   // ------------------------------------------------------------- game flow
 
   function mkTeam(hp, fuel, income) {
-    return { hp, maxHp: hp, lag: hp, fuel, income, bank: 0, hand: [], pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
+    return { hp, maxHp: hp, lag: hp, fuel, income, bank: 0, hand: [], next: null, pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
   }
 
   function newGame() {
@@ -85,6 +87,9 @@
     G.levelIndex = ui.level;
     G.level = LEVELS[ui.level];
     G.teams = { '1': mkTeam(BASE_HP, FUEL.start, FUEL.perTurn), '-1': mkTeam(G.level.hp, G.level.start, G.level.income) };
+    TR.dealDeck(G.teams[1]);
+    TR.dealDeck(G.teams[-1]);
+    ui.fresh = -1;
     fx.clear();
     startPlan(true);
   }
@@ -104,10 +109,9 @@
         t.bank -= gain;
         t.fuel = Math.min(FUEL.max, t.fuel + gain);
       }
-      t.hand = TR.drawHand(first);   // the opening hand is cheap aircraft only
       t.pending = null;
     }
-    if (!first) { fx.float(486, 606, '+' + FUEL.perTurn, '#ffe55c', 34); audio.play('fuel'); }
+    if (!first) { fx.float(FUEL_X + 100, 606, '+' + FUEL.perTurn, '#ffe55c', 34); audio.play('fuel'); }
     G.aiChoice = TR.aiPlan(G, -1, G.level);
     G.aiRevealAt = rand(0.45, 1.2);
     G.aiShown = false;
@@ -163,7 +167,7 @@
     if (def.cost > me.fuel) { ui.deny = i; ui.denyT = 0.4; audio.play('deny'); return; }
     ui.picked = i;
     ui.aim = buildAim(type);
-    me.pending = { type, angle: 0, pop: 0, pts: null };
+    me.pending = { type, angle: 0, pop: 0, pts: null, slot: i };
     setAim(lerp(def.aMin, def.aMax, 0.5));
     ui.hintPick = false;
     audio.play('pick');
@@ -173,11 +177,13 @@
     if (!p) return;
     const t = G.teams[team];
     t.fuel -= UNITS[p.type].cost;
+    TR.cycleCard(t, p.slot);   // the played card goes under the deck; the next one takes its slot
     TR.launch(G, team, p.type, p.angle);
   }
 
   function go() {
     if (G.phase !== 'plan') return;
+    ui.fresh = G.teams[1].pending ? G.teams[1].pending.slot : -1;
     commit(1, G.teams[1].pending);
     commit(-1, G.aiChoice);
     G.teams[1].pending = G.teams[-1].pending = null;
@@ -376,24 +382,28 @@
 
     // fuel gauge
     const spending = ui.picked >= 0 ? UNITS[me.hand[ui.picked]].cost : 0;
-    art.drop(ctx, 406, 658, 25);
-    art.text(ctx, me.fuel + '/' + FUEL.max + 'L', 438, 662, 50, '#fff', { align: 'left', lw: 8 });
+    art.drop(ctx, FUEL_X + 20, 658, 25);
+    art.text(ctx, me.fuel + '/' + FUEL.max + 'L', FUEL_X + 52, 662, 50, '#fff', { align: 'left', lw: 8 });
     for (let i = 0; i < FUEL.max; i++) {
-      art.rrect(ctx, 386 + i * 21, 694, 17, 11, 4);
+      art.rrect(ctx, FUEL_X + i * 21, 694, 17, 11, 4);
       const spend = i >= me.fuel - spending && i < me.fuel;
       ctx.fillStyle = i >= me.fuel ? 'rgba(43,26,18,0.35)' : spend ? (Math.sin(t * 10) > 0 ? '#ff8a1e' : '#ffe9a8') : '#ffd83a';
       ctx.fill(); ctx.lineWidth = 2.2; ctx.strokeStyle = art.INK; ctx.stroke();
     }
 
-    // hand
+    // hand, with the card that will be dealt next shown small beside it
     const slide = (1 - art.easeOutBack(ui.cardsT)) * 230;
     if (ui.cardsT > 0.01) {
+      // a card that has just been dealt pops in, and so does the new "next" card
+      const pop = ui.fresh >= 0 && G.phase === 'plan' ? 0.5 + 0.5 * art.easeOutBack(clamp((G.planT - 0.15) / 0.3, 0, 1)) : 1;
+      art.text(ctx, 'NEXT', NEXT.x, NEXT.y - 58 + slide, 17, '#fff', { lw: 5 });
+      art.card(ctx, { x: NEXT.x - CARD.w / 2, y: NEXT.y - CARD.h / 2 + slide, w: CARD.w, h: CARD.h }, me.next, { scale: NEXT.scale * pop, t });
       for (let i = 0; i < me.hand.length; i++) {
         const r = cardRect(i), type = me.hand[i];
         const sel = ui.picked === i, short = UNITS[type].cost > me.fuel;
         const dx = ui.deny === i && ui.denyT > 0 ? Math.sin(ui.denyT * 60) * 6 : 0;
-        art.card(ctx, { x: r.x + dx, y: r.y + slide + i * slide * 0.25 - (sel ? 22 : 0), w: r.w, h: r.h }, type, {
-          selected: sel, disabled: short, short, scale: sel ? 1.06 : 1, tilt: (i - 1) * 0.03, t,
+        art.card(ctx, { x: r.x + dx, y: r.y + slide + i * slide * 0.2 - (sel ? 22 : 0), w: r.w, h: r.h }, type, {
+          selected: sel, disabled: short, short, scale: (sel ? 1.06 : 1) * (i === ui.fresh ? pop : 1), tilt: (i - 1.5) * 0.025, t,
         });
       }
       if (ui.picked >= 0) {
@@ -407,7 +417,7 @@
         ctx.fillStyle = 'rgba(43,26,18,0.72)'; ctx.fill();
         art.text(ctx, info, W / 2, top + 96.5, 21, '#fff6dc', { stroke: false });
       } else if (ui.hintPick && G.turn <= 2 && G.phase === 'plan') {
-        art.text(ctx, 'PICK A CARD', W / 2, 546 + Math.sin(t * 5) * 5, 30, '#fff');
+        art.text(ctx, 'PICK A CARD', CARD.x + 2 * CARD.w + 1.5 * CARD.gap, 546 + Math.sin(t * 5) * 5, 30, '#fff');
       }
     }
 
@@ -595,7 +605,7 @@
     }
     if (G.phase !== 'plan') return;
     if (hit(BTN_GO, p, 10)) { go(); return; }
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < TR.HAND; i++) {
       const r = cardRect(i);
       if (hit({ x: r.x, y: r.y - 24, w: r.w, h: r.h + 24 }, p, 6)) { pickCard(i); return; }
     }
@@ -614,7 +624,7 @@
     let hot = (G.phase === 'menu' && (hit(BTN_PLAY, p, 14) || chipAt(MENU_CHIPS, p) >= 0))
       || (G.phase === 'over' && (hit(BTN_AGAIN, p, 14) || chipAt(OVER_CHIPS, p) >= 0));
     if (G.phase === 'plan') {
-      hot = hit(BTN_GO, p, 10) || [0, 1, 2].some((i) => hit(cardRect(i), p, 6));
+      hot = hit(BTN_GO, p, 10) || G.teams[1].hand.some((_, i) => hit(cardRect(i), p, 6));
       const pend = G.teams[1].pending;
       if (!hot && pend && p.y < GROUND + 10 && nearPath(p, pend.pts, 170)) { canvas.style.cursor = 'grab'; return; }
     }
@@ -638,7 +648,7 @@
     }
     if (G.phase !== 'plan') return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(); }
-    else if (e.key >= '1' && e.key <= '3') pickCard(+e.key - 1);
+    else if (e.key >= '1' && e.key <= String(TR.HAND)) pickCard(+e.key - 1);
     else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && G.teams[1].pending) {
       e.preventDefault();
       ui.hintAim = false;
