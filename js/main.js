@@ -236,7 +236,7 @@
         G.aiShown = true;
         const c = G.aiChoice;
         if (c) {
-          G.teams[-1].pending = { type: c.type, angle: c.angle, pop: 0, pts: previewFor(c.type, -1, c.angle) };
+          G.teams[-1].pending = { type: c.type, angle: c.angle, pop: 0 };
           audio.play('click');
         }
       }
@@ -344,9 +344,17 @@
     ctx.restore();
   }
 
+  // Once an enemy has taken off, the rest of its climb is drawn so you can see the
+  // altitude it is heading for. The line goes away when it gets there.
+  function climbLine(u) {
+    if (u.team !== -1 || u.targetY == null || Math.abs(u.y - u.targetY) < 2.5) return;
+    launchLine(TR.tracePath(u, { level: 170 }), '#ff5d4d');
+  }
+
   function drawWorld() {
     const t = G.time;
     for (const u of G.units) cone(u);
+    for (const u of G.units) climbLine(u);
     for (const u of G.units) shadow(u.x, u.y, u.def.radius);
     for (const s of G.shots) if (s.k === 'bomb' || s.k === 'shell') shadow(s.x, s.y, 9);
     fx.draw(ctx, true, t);
@@ -356,7 +364,7 @@
     if (G.phase === 'plan') {
       const foe = G.teams[-1].pending;
       if (foe) {
-        launchLine(foe.pts, '#ff5d4d');
+        // the enemy's unit is on show, but where it is headed is not, until it takes off
         art.drawPending(ctx, foe.type, -1, foe.angle, t, foe.pop);
       } else {
         bubble(W - 236, 452, G.aiShown ? 'PASS' : '. . .');

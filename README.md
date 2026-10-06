@@ -11,7 +11,7 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 
 1. You hold four different cards from your deck. Tap one and the unit appears on your runway.
 2. Drag the dotted launch line up or down. It shows the whole climb to the height the unit will level off at, then fades out along its level flight.
-3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn. The enemy's launch shows the same line in red; aircraft already in the air show no line.
+3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn. The enemy's unit appears on its runway but its line stays hidden until it takes off; then a red line shows the rest of its climb, up to the altitude it is heading for, and disappears once it gets there. Your own aircraft show no line once launched.
 
 Every card costs fuel. You gain 2 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. Cards work as a deck, not a fresh deal each turn. The deck holds one of each of the six cards, so your hand of four never has duplicates. When you play a card it goes back into the deck and the card shown as **Next** takes its place; a new Next is then picked at random from the cards not in your hand (Mustang and Helicopter come up most often, Missile Heli, Missile and Mortar least). Cards you don't play stay in your hand. The opening hand is always the four aircraft.
 
