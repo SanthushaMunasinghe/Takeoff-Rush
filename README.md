@@ -10,12 +10,12 @@ A hybrid-casual, turn-based sky-war game for landscape mobile. You command the *
 ## How it plays
 
 1. You hold four different cards from your deck. Tap one and the unit appears on your runway.
-2. Drag the dotted arrow to set its launch direction. That decides the curve it climbs and how high it levels off.
-3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn.
+2. Drag the dotted launch line up or down. It shows the whole climb to the height the unit will level off at, then fades out along its level flight.
+3. Press **Continue**. The enemy commits its own launch and the battle runs for 2 seconds, then freezes for the next turn. The enemy's launch shows the same line in red; aircraft already in the air show no line.
 
 Every card costs fuel. You gain 2 fuel a turn (10 max), so pressing Continue without a card to bank fuel is part of the strategy. Cards work as a deck, not a fresh deal each turn. The deck holds one of each of the six cards, so your hand of four never has duplicates. When you play a card it goes back into the deck and the card shown as **Next** takes its place; a new Next is then picked at random from the cards not in your hand (Mustang and Helicopter come up most often, Missile Heli, Missile and Mortar least). Cards you don't play stay in your hand. The opening hand is always the four aircraft.
 
-Every aircraft shares one band of sky, from skimming the runway up to the top of the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge); the Mustang's is a narrower 16 degrees. It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–60 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
+Every aircraft shares one band of sky, from skimming the runway up to just above the control towers. The launch direction sets the curve it climbs and the height it levels off at: aim low and it stays low. Each aircraft watches a 30-degree cone straight ahead, out to its weapon range (drawn as a faint wedge); the Mustang's is a narrower 16 degrees. It engages enemy aircraft inside that cone and ignores anything flying above or below it, so the height you pick decides who you fight and who you slip past. Planes shoot as they fly past; helicopters stop in mid-air and fight until the enemy is gone. Aircraft never collide. Each aircraft that reaches the far airport hits it (25–60 of its 100 health) and leaves the field. Missiles and mortar shells only hurt units. First airport to 0 loses.
 
 A bullet does 20 damage, and every aircraft goes down in 5 to 7 bullets. Rockets, bombs and shells need fewer hits.
 

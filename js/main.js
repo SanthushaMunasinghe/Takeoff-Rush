@@ -16,7 +16,7 @@
   // and pinned to the bottom, so taller screens simply see more sky.
   const view = { scale: 1, dpr: 1, ox: 0, oy: 0, left: 0, right: W, top: 0, bottom: H, hudTop: 0 };
 
-  const G = TR.G = { phase: 'menu', time: 0, turn: 0, units: [], shots: [], paths: [], teams: null };
+  const G = TR.G = { phase: 'menu', time: 0, turn: 0, units: [], shots: [], teams: null };
   const ui = { picked: -1, aim: null, aiming: false, cardsT: 0, deny: -1, denyT: 0, press: 0, hintPick: true, hintAim: true, level: 0, fresh: -1 };
   const LEVELS = TR.LEVELS;
   let acc = 0;
@@ -94,8 +94,18 @@
     startPlan(true);
   }
 
+  // The launch line shown while a unit waits on the runway: its whole climb up to
+  // the height it will level off at, then a stretch of level flight that fades out.
+  // (A mortar shell has no cruise height, so it just shows the start of its arc.)
   function previewFor(type, team, angle) {
-    return TR.tracePath(TR.makeBody(type, team, angle), { len: UNITS[type].previewLen });
+    const def = UNITS[type], body = TR.makeBody(type, team, angle);
+    return TR.tracePath(body, def.kind === 'shell' ? { len: def.previewLen } : { level: 340 });
+  }
+
+  function launchLine(pts, col) {
+    const o = { ink: true, r: 5, gap: 18, offset: (G.time * 30) % 18 };
+    if (pts.climb != null) { o.head = 0; o.fadeFrom = pts.climb; } else o.head = 28;
+    art.dotted(ctx, pts, col, o);
   }
 
   function startPlan(first) {
@@ -116,25 +126,17 @@
     G.aiRevealAt = rand(0.45, 1.2);
     G.aiShown = false;
     ui.picked = -1; ui.aim = null; ui.aiming = false;
-    // Where everything already in the air will travel during the next turn.
-    G.paths = [];
-    // (aircraft that have stopped to fight are going nowhere for now)
-    for (const u of G.units) if (!u.hold) G.paths.push({ team: u.team, pts: TR.tracePath(u, { time: TURN_TIME }) });
-    for (const s of G.shots) if (s.k === 'shell') G.paths.push({ team: s.team, pts: TR.tracePath(s, { time: TURN_TIME }) });
   }
 
-  // Launch-direction samples across a unit's allowed range, used both to draw
-  // the aiming fan and to turn a finger position back into a launch angle.
+  // Launch lines sampled across a unit's allowed range, used both to draw the
+  // aiming fan and to turn a finger position back into a launch angle.
   function buildAim(type) {
-    const def = UNITS[type], N = 20, samples = [];
-    const ox = TR.spawnX(1), oy = GROUND - def.sit;
+    const def = UNITS[type], N = 40, samples = [];
     for (let i = 0; i <= N; i++) {
       const ang = lerp(def.aMin, def.aMax, i / N);
-      const pts = previewFor(type, 1, ang);
-      const tip = pts[pts.length - 1];
-      samples.push({ ang, pts, dir: Math.atan2(oy - tip.y, tip.x - ox) });
+      samples.push({ ang, pts: previewFor(type, 1, ang) });
     }
-    return { type, samples, ox, oy };
+    return { type, samples };
   }
 
   function setAim(angle) {
@@ -144,17 +146,20 @@
     p.pts = previewFor(p.type, 1, p.angle);
   }
 
+  // Aim by dragging the line itself: pick the launch whose line passes nearest the finger.
   function aimAt(pt) {
-    const a = ui.aim, s = a.samples;
-    const dir = Math.atan2(a.oy - pt.y, Math.max(1, pt.x - a.ox));
-    if (dir <= s[0].dir) return setAim(s[0].ang);
-    for (let i = 1; i < s.length; i++) {
-      if (dir <= s[i].dir) {
-        const k = (dir - s[i - 1].dir) / Math.max(1e-6, s[i].dir - s[i - 1].dir);
-        return setAim(lerp(s[i - 1].ang, s[i].ang, k));
-      }
-    }
-    setAim(s[s.length - 1].ang);
+    const s = ui.aim.samples;
+    const d = s.map((smp) => {
+      let m = 1e9;
+      for (const q of smp.pts) { const k = Math.hypot(q.x - pt.x, q.y - pt.y); if (k < m) m = k; }
+      return m;
+    });
+    let best = 0;
+    for (let i = 1; i < d.length; i++) if (d[i] < d[best]) best = i;
+    if (Math.max.apply(null, d) - d[best] < 2) return;   // down where every line overlaps: no way to tell
+    // slide smoothly between the two nearest lines
+    const n = best > 0 && (best === d.length - 1 || d[best - 1] < d[best + 1]) ? best - 1 : best + 1;
+    setAim(lerp(s[best].ang, s[n].ang, d[best] / Math.max(1e-6, d[best] + d[n])));
   }
 
   function pickCard(i) {
@@ -297,19 +302,29 @@
     const me = G.teams[1], p = me.pending;
     if (!p || !ui.aim) return;
     const s = ui.aim.samples, lo = s[0].pts, hi = s[s.length - 1].pts;
-    // the fan of directions this unit can be launched in
+    // the band of sky this unit can be sent into, fading out with the lines
     ctx.beginPath();
     ctx.moveTo(lo[0].x, lo[0].y);
     for (const q of lo) ctx.lineTo(q.x, q.y);
     for (let i = 1; i < s.length - 1; i++) { const q = s[i].pts[s[i].pts.length - 1]; ctx.lineTo(q.x, q.y); }
     for (let i = hi.length - 1; i >= 0; i--) ctx.lineTo(hi[i].x, hi[i].y);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(79,157,255,0.22)'; ctx.fill();
-    ctx.lineWidth = 2.5; ctx.setLineDash([10, 9]); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.stroke(); ctx.setLineDash([]);
-    art.dotted(ctx, p.pts, '#4f9dff', { ink: true, r: 5, gap: 18, head: 28, offset: (G.time * 30) % 18 });
+    let fill = 'rgba(79,157,255,0.22)', edge = 'rgba(255,255,255,0.75)';
+    if (lo.climb != null) {
+      const x0 = lo[0].x, x1 = Math.max(lo[lo.length - 1].x, hi[hi.length - 1].x);
+      const shade = (rgb, a) => {
+        const g = ctx.createLinearGradient(x0, 0, x1, 0);
+        g.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); g.addColorStop(0.45, 'rgba(' + rgb + ',' + a + ')'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+        return g;
+      };
+      fill = shade('79,157,255', 0.22); edge = shade('255,255,255', 0.75);
+    }
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.setLineDash([10, 9]); ctx.strokeStyle = edge; ctx.stroke(); ctx.setLineDash([]);
+    launchLine(p.pts, '#4f9dff');
     if (ui.hintAim) {
-      const tip = p.pts[p.pts.length - 1];
-      art.text(ctx, 'DRAG TO AIM', tip.x + 30, tip.y - 44 + Math.sin(G.time * 5) * 4, 26, '#fff', { align: 'left' });
+      const tip = p.pts[Math.min(p.pts.length - 1, 45)];
+      art.text(ctx, 'DRAG TO AIM', tip.x + 10, tip.y - 50 + Math.sin(G.time * 5) * 4, 26, '#fff', { align: 'left' });
     }
   }
 
@@ -331,11 +346,6 @@
 
   function drawWorld() {
     const t = G.time;
-    if (G.phase === 'plan') {
-      for (const p of G.paths) {
-        art.dotted(ctx, p.pts, p.team === 1 ? 'rgba(44,108,214,0.5)' : 'rgba(204,50,38,0.5)', { r: 3.2, gap: 13, head: 15 });
-      }
-    }
     for (const u of G.units) cone(u);
     for (const u of G.units) shadow(u.x, u.y, u.def.radius);
     for (const s of G.shots) if (s.k === 'bomb' || s.k === 'shell') shadow(s.x, s.y, 9);
@@ -346,7 +356,7 @@
     if (G.phase === 'plan') {
       const foe = G.teams[-1].pending;
       if (foe) {
-        art.dotted(ctx, foe.pts, '#ff5d4d', { ink: true, r: 5, gap: 18, head: 28, offset: (t * 30) % 18 });
+        launchLine(foe.pts, '#ff5d4d');
         art.drawPending(ctx, foe.type, -1, foe.angle, t, foe.pop);
       } else {
         bubble(W - 236, 452, G.aiShown ? 'PASS' : '. . .');

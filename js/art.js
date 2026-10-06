@@ -573,6 +573,7 @@
   };
 
   // A dotted path with an arrowhead, like a pencilled flight plan.
+  // With `fadeFrom`, the dots fade out between that distance along the path and its end.
   art.dotted = function (c, pts, col, o) {
     o = o || {};
     const r = o.r || 4.2, gap = o.gap || 15, head = o.head === undefined ? 20 : o.head;
@@ -589,12 +590,14 @@
       while (d < seg && run + d < stop) {
         const k = d / seg;
         const x = a.x + (b.x - a.x) * k, y = a.y + (b.y - a.y) * k;
+        if (o.fadeFrom != null) c.globalAlpha = 1 - TR.clamp((run + d - o.fadeFrom) / Math.max(1, total - o.fadeFrom), 0, 1);
         if (o.ink) { c.beginPath(); c.arc(x, y, r + 1.6, 0, TAU); c.fillStyle = INK; c.fill(); c.fillStyle = col; }
         c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
         d += gap;
       }
       carry = d - seg; run += seg; last = b;
     }
+    c.globalAlpha = 1;
     if (head && pts.length > 1) {
       const a = pts[Math.max(0, pts.length - 4)];
       const ang = Math.atan2(last.y - a.y, last.x - a.x);

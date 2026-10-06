@@ -65,19 +65,24 @@
     b.x += b.vx * dt; b.y += b.vy * dt;
   };
 
-  // Sample a body's future path, either for a path length or a duration.
+  // Sample a body's future path: for a path length (`len`), a duration (`time`),
+  // or (`level`) the whole climb until it levels off at its cruise height plus
+  // `level` px of level flight. In that case `pts.climb` is the length of the climb.
   TR.tracePath = function (src, o) {
     const b = Object.assign({}, src);
     const pts = [{ x: b.x, y: b.y }];
     const dt = 1 / 30;
-    let len = 0, t = 0;
-    while ((o.len ? len < o.len : t < o.time) && t < 14) {
+    let len = 0, t = 0, climb = -1;
+    const more = () => (o.level != null ? climb < 0 || len < climb + o.level : o.len ? len < o.len : t < o.time);
+    while (more() && t < 14) {
       const px = b.x, py = b.y;
       TR.stepBody(b, dt, null);
       len += Math.hypot(b.x - px, b.y - py); t += dt;
       pts.push({ x: b.x, y: b.y });
+      if (o.level != null && climb < 0 && Math.abs(b.y - b.targetY) < 2.5) climb = len;
       if (b.y > GROUND - 2 && b.def.kind === 'shell') break;
     }
+    if (o.level != null) pts.climb = climb < 0 ? len : climb;
     return pts;
   };
 
