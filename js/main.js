@@ -23,7 +23,7 @@
 
   // ---------------------------------------------------------------- layout
 
-  const CARD = { w: 116, h: 152, gap: 16, y: 556 };
+  const CARD = { w: 108, h: 136, gap: 16, y: 580 };   // kept below the lowest flight lane
   const BTN_GO = { x: 1262, y: 624, w: 250, h: 80 };
   const BTN_PLAY = { x: W / 2 - 160, y: 462, w: 320, h: 90 };
   const BTN_AGAIN = { x: W / 2 - 170, y: 502, w: 340, h: 88 };
@@ -76,7 +76,7 @@
   // ------------------------------------------------------------- game flow
 
   function mkTeam(hp, fuel, income) {
-    return { hp, maxHp: hp, lag: hp, fuel, income, hand: [], pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
+    return { hp, maxHp: hp, lag: hp, fuel, income, bank: 0, hand: [], pending: null, hurtT: 0, smokeT: 0, kills: 0, landed: 0 };
   }
 
   function newGame() {
@@ -97,11 +97,17 @@
     G.phase = 'plan'; G.turn++; G.planT = 0;
     for (const k of [1, -1]) {
       const t = G.teams[k];
-      if (!first) t.fuel = Math.min(FUEL.max, t.fuel + t.income);
-      t.hand = TR.drawHand();
+      if (!first) {
+        // income can be a fraction of a unit per turn; it pays out whole units as they add up
+        t.bank += t.income;
+        const gain = Math.floor(t.bank + 1e-9);
+        t.bank -= gain;
+        t.fuel = Math.min(FUEL.max, t.fuel + gain);
+      }
+      t.hand = TR.drawHand(first);   // the opening hand is all aircraft
       t.pending = null;
     }
-    if (!first) { fx.float(486, 606, '+' + G.teams[1].income, '#ffe55c', 34); audio.play('fuel'); }
+    if (!first) { fx.float(486, 606, '+' + FUEL.perTurn, '#ffe55c', 34); audio.play('fuel'); }
     G.aiChoice = TR.aiPlan(G, -1, G.level);
     G.aiRevealAt = rand(0.45, 1.2);
     G.aiShown = false;
@@ -331,6 +337,7 @@
       if (s.k === 'bullet') art.bullet(ctx, s);
       else if (s.k === 'bomb') art.bomb(ctx, s.x, s.y, Math.atan2(s.vy, s.vx), s.team);
       else if (s.k === 'shell') art.shell(ctx, s.x, s.y, Math.atan2(s.vy, s.vx), s.team);
+      else if (s.k === 'rocket') art.rocket(ctx, s.x, s.y, s.ang, s.team, t);
     }
     fx.draw(ctx, false, t);
     for (const u of G.units) hpBar(u);
@@ -378,11 +385,12 @@
         const info = def.name.toUpperCase() + '  ·  ' + def.tag.toUpperCase() + (def.baseDmg ? '  ·  ' + def.baseDmg + ' BASE DAMAGE' : '');
         ctx.font = '400 21px ' + art.FONT;
         const iw = ctx.measureText(info).width + 44;
-        art.rrect(ctx, W / 2 - iw / 2, 480, iw, 38, 19);
+        // shown up by the turn counter, clear of the flight lanes
+        art.rrect(ctx, W / 2 - iw / 2, top + 76, iw, 38, 19);
         ctx.fillStyle = 'rgba(43,26,18,0.72)'; ctx.fill();
-        art.text(ctx, info, W / 2, 500.5, 21, '#fff6dc', { stroke: false });
+        art.text(ctx, info, W / 2, top + 96.5, 21, '#fff6dc', { stroke: false });
       } else if (ui.hintPick && G.turn <= 2 && G.phase === 'plan') {
-        art.text(ctx, 'PICK A CARD', W / 2, 522 + Math.sin(t * 5) * 5, 30, '#fff');
+        art.text(ctx, 'PICK A CARD', W / 2, 546 + Math.sin(t * 5) * 5, 30, '#fff');
       }
     }
 
@@ -417,9 +425,9 @@
       const span = W + 500, x = ((t * speed + off) % span) - 250;
       art.drawUnit(ctx, { def: UNITS[type], type, team, x: team === 1 ? x : W - x, y: y + Math.sin(t * 1.4 + off) * 14, a: a || 0, age: 9, id: off, flash: 0 }, t);
     };
-    fly('heavy', 1, 55, 96, 900);
+    fly('bomber', 1, 55, 96, 900);
     fly('mustang', 1, 130, 286, 200, 0.05);
-    fly('heli', -1, 60, 300, 1250);
+    fly('mheli', -1, 60, 300, 1250);
     fly('heli', -1, 85, 520, 500);
     fly('mustang', -1, 120, 150, 1500, -0.04);
 

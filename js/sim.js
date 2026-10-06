@@ -212,6 +212,13 @@
       G.shots.push({ k: 'bomb', team: u.team, x, y, vx: (tx - x) / tt, vy: (ty - y) / tt - 0.5 * w.g * tt, w });
       fx.puff(x, y, { r: 9, life: 0.4, col: '#f1ece4' });
       sfx('drop');
+    } else if (w.type === 'rocket') {
+      // Kicks out below the hull, then steers itself onto the target.
+      G.shots.push({
+        k: 'rocket', team: u.team, x: u.x + u.team * 8, y: u.y + 18, ang: (u.team === 1 ? 0 : Math.PI) + u.team * 0.35,
+        sp: 130, target: e, life: w.life, w, puffT: 0,
+      });
+      sfx('whoosh');
     }
     u.cool = w.reload;
   }
@@ -254,6 +261,24 @@
       if (s.y >= GROUND - 6 || nearFoe(G, s.team, s.x, s.y, s.def.fuse)) { blast(G, s.team, s.x, Math.min(s.y, GROUND - 8), s.def.warhead); return true; }
       return s.x < -200 || s.x > W + 200;
     }
+    if (s.k === 'rocket') {
+      const w = s.w, e = s.target;
+      s.life -= dt;
+      s.sp = Math.min(w.speed, s.sp + 520 * dt);
+      if (e && !e.dead) {
+        const tt = Math.hypot(e.x - s.x, e.y - s.y) / w.speed * 0.6;
+        const diff = Math.atan2(e.y + e.vy * tt - s.y, e.x + e.vx * tt - s.x) - s.ang;
+        s.ang += clamp(Math.atan2(Math.sin(diff), Math.cos(diff)), -w.turn * dt, w.turn * dt);
+      }
+      s.x += Math.cos(s.ang) * s.sp * dt; s.y += Math.sin(s.ang) * s.sp * dt;
+      s.puffT -= dt;
+      if (s.puffT <= 0) { s.puffT = 0.035; fx.puff(s.x, s.y, { r: 5.5, life: 0.45, vy: -6, col: '#f7f3ea', ink: false, back: true, grow: 0.7 }); }
+      const hit = nearFoe(G, s.team, s.x, s.y, 6);
+      if (hit) { hurt(G, hit, w.dmg); fx.boom(s.x, s.y, 34, Math.random() < 0.5); sfx('pop'); return true; }
+      if (s.y >= GROUND - 4) { fx.boom(s.x, GROUND - 8, 24, false); fx.dust(s.x, 16); sfx('pop'); return true; }
+      if (s.life <= 0) { fx.puff(s.x, s.y, { r: 12, life: 0.5 }); return true; }
+      return false;
+    }
     return true;
   }
 
@@ -277,10 +302,11 @@
         continue;
       }
 
-      // Aircraft fly on until a hostile aircraft is ahead in range, then stop and fight it.
+      // Aircraft shoot whatever hostile aircraft is ahead in range. Planes do it on
+      // the move; units that stop halt where they are until it is gone.
       const armed = u.age > 0.7;
       const foe = armed ? pickTarget(G, u, d.weapon, false) : null;
-      u.hold = !!foe || queued(G, u);
+      u.hold = !!d.stops && (!!foe || queued(G, u));
       u.holdK = clamp(u.holdK + (u.hold ? dt : -dt) * 4, 0, 1);
       if (u.hold) hover(u, dt); else TR.stepBody(u, dt, units);
 

@@ -153,7 +153,7 @@
     prop(c, 51, 0, 25, t, 0);
   };
 
-  SPR.heavy = function (c, p, t, gear) {
+  SPR.bomber = function (c, p, t, gear) {
     if (gear > 0.02) {
       c.save(); c.globalAlpha *= gear;
       c.beginPath(); c.moveTo(14, 12); c.lineTo(15, 26); c.moveTo(-66, 4); c.lineTo(-67, 14);
@@ -244,6 +244,46 @@
     rotor(c, -2, -34, 54, t, 0);
   };
 
+  // Tandem-rotor gunship with a rocket rack.
+  SPR.mheli = function (c, p, t) {
+    c.beginPath(); c.moveTo(-28, 13); c.lineTo(-29, 21); c.moveTo(24, 13); c.lineTo(25, 21);
+    c.lineWidth = 3.2; c.strokeStyle = INK; c.stroke();
+    wheel(c, -29, 22, 4.6); wheel(c, 25, 22, 4.6);
+    // rotor pylons
+    c.beginPath(); c.moveTo(-52, -10); c.quadraticCurveTo(-54, -36, -40, -37); c.lineTo(-30, -37);
+    c.quadraticCurveTo(-23, -34, -20, -19); c.closePath(); paint(c, p.dark);
+    c.beginPath(); c.moveTo(12, -19); c.quadraticCurveTo(14, -30, 22, -30); c.lineTo(30, -30);
+    c.quadraticCurveTo(36, -28, 36, -17); c.closePath(); paint(c, p.dark);
+    // hull
+    c.beginPath(); c.moveTo(-54, -5);
+    c.quadraticCurveTo(-56, -19, -42, -20);
+    c.lineTo(22, -20);
+    c.quadraticCurveTo(44, -18, 48, -2);
+    c.quadraticCurveTo(48, 11, 34, 14);
+    c.lineTo(-40, 14);
+    c.quadraticCurveTo(-55, 10, -54, -5);
+    c.closePath(); paint(c, p.body, 3.2);
+    c.beginPath(); c.moveTo(-46, 8); c.quadraticCurveTo(-4, 13, 38, 9.5); c.quadraticCurveTo(-4, 10, -46, 8); c.fillStyle = p.light; c.fill();
+    c.beginPath(); c.moveTo(-50, -9); c.lineTo(20, -9); c.lineWidth = 4; c.strokeStyle = p.trim; c.stroke();
+    // cockpit
+    c.beginPath(); c.moveTo(25, -18.4); c.quadraticCurveTo(42, -16, 46.6, -3); c.lineTo(31, -2);
+    c.quadraticCurveTo(25, -8, 25, -18.4); c.closePath(); paint(c, p.glass, 2.6);
+    eye(c, 38, -9, 3.4);
+    for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(-36 + i * 17, 0, 3.6, 0, TAU); paint(c, p.glass, 1.8); }
+    // rocket rack
+    c.beginPath(); c.moveTo(-18, 9); c.lineTo(-18, 18); c.moveTo(8, 9); c.lineTo(8, 18); c.lineWidth = 3; c.strokeStyle = INK; c.stroke();
+    for (let i = 0; i < 2; i++) {
+      const y = 15.5 + i * 6.5;
+      rrect(c, -24, y - 3, 34, 6, 3); paint(c, '#f4f1ea', 2);
+      c.beginPath(); c.moveTo(10, y - 3); c.quadraticCurveTo(18, y, 10, y + 3); c.closePath(); paint(c, '#e23b2e', 2);
+    }
+    // rotors
+    c.beginPath(); c.moveTo(-38, -37); c.lineTo(-38, -42); c.moveTo(25, -30); c.lineTo(25, -35);
+    c.lineWidth = 4.5; c.strokeStyle = INK; c.stroke();
+    rotor(c, -38, -43, 42, t, 0);
+    rotor(c, 25, -36, 42, t, 1.6);
+  };
+
   SPR.missile = function (c, p, t, gear, lit) {
     if (lit !== false) flame(c, -28, 0, 26, 6, t);
     c.beginPath(); c.moveTo(-14, -6); c.lineTo(-29, -18); c.lineTo(-35, -15); c.lineTo(-28, -5); c.closePath(); paint(c, p.dark, 2.6);
@@ -288,6 +328,14 @@
     c.beginPath(); c.moveTo(-8, -3); c.lineTo(-15, -8); c.lineTo(-15, 8); c.lineTo(-8, 3); c.closePath(); paint(c, p.body, 2.2);
     c.beginPath(); c.moveTo(-10, -5); c.quadraticCurveTo(4, -9, 12, 0); c.quadraticCurveTo(4, 9, -10, 5); c.closePath(); paint(c, '#3b3843', 2.6);
     c.beginPath(); c.moveTo(-2, -4.4); c.quadraticCurveTo(3, -5.2, 6, -2.6); c.lineWidth = 1.8; c.strokeStyle = 'rgba(255,255,255,0.6)'; c.stroke();
+    c.restore();
+  };
+
+  art.rocket = function (c, x, y, ang, team, t) {
+    c.save(); c.translate(x, y); c.rotate(ang);
+    flame(c, -9, 0, 14, 3.4, t);
+    rrect(c, -10, -3.4, 18, 6.8, 3); paint(c, '#f6f2e8', 2.2);
+    c.beginPath(); c.moveTo(7, -3.4); c.quadraticCurveTo(15, 0, 7, 3.4); c.closePath(); paint(c, PAL[team].body, 2.2);
     c.restore();
   };
 
@@ -617,13 +665,13 @@
       c.fillStyle = 'rgba(255,255,255,0.7)';
       c.beginPath(); c.arc(x + 26, y + h * 0.5, 18, 0, TAU); c.arc(x + 52, y + h * 0.53, 22, 0, TAU); c.arc(x + w - 26, y + h * 0.52, 20, 0, TAU); c.fill();
     }
-    const sc = { mustang: 0.82, heli: 0.78, heavy: 0.56, missile: 1.05, mortar: 0.95 }[type];
+    const sc = { mustang: 0.82, heli: 0.78, mheli: 0.72, bomber: 0.56, missile: 1.05, mortar: 0.95 }[type] * w / 116;
     if (o.disabled) c.globalAlpha = 0.55;
-    art.drawIcon(c, type, 0, y + 8 + h * 0.27 + (type === 'heli' ? 6 : 0), sc, o.disabled ? 0 : 1, o.t || 0);
+    art.drawIcon(c, type, 0, y + 8 + h * 0.27 + (def.kind === 'heli' ? 6 : 0), sc, o.disabled ? 0 : 1, o.t || 0);
     c.restore();
     // name + cost
-    const name = { mustang: 'MUSTANG', heli: 'HELI', heavy: 'HEAVY PLANE', missile: 'MISSILE', mortar: 'MORTAR' }[type];
-    art.text(c, name, 0, y + h * 0.69, name.length > 8 ? 13 : 17, o.disabled ? '#6f6a66' : '#3b2a22', { stroke: false });
+    const name = def.label;
+    art.text(c, name, 0, y + h * 0.69, name.length > 8 ? 12.5 : 16, o.disabled ? '#6f6a66' : '#3b2a22', { stroke: false });
     art.drop(c, -15, y + h - 23, 13);
     art.text(c, String(def.cost), 12, y + h - 20, 26, o.short ? '#ff6b5c' : '#fff', { lw: 5 });
     c.restore();
